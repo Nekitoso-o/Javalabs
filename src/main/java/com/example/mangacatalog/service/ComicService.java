@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +26,7 @@ public class ComicService {
         List<Comic> comics = comicRepository.findByTitleContainingIgnoreCase(title);
         return comics.stream()
                 .map(comicMapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     // Вспомогательный метод для добавления данных (чтобы было что проверять)
