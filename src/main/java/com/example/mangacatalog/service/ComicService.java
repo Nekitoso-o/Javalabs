@@ -29,9 +29,14 @@ public class ComicService {
                 .toList();
     }
 
-    // Вспомогательный метод для добавления данных (чтобы было что проверять)
+
     public ComicDto createComic(Comic comic) {
         Comic savedComic = comicRepository.save(comic);
         return comicMapper.toDto(savedComic);
+    }
+    public List<ComicDto> getAllComics() {
+        return comicRepository.findAll().stream()
+                .map(comicMapper::toDto)
+                .toList();
     }
 }

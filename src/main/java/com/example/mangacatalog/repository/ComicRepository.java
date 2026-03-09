@@ -8,6 +8,5 @@ import java.util.List;
 
 @Repository
 public interface ComicRepository extends JpaRepository<Comic, Long> {
-    // Метод для поиска по названию (для реализации @RequestParam)
     List<Comic> findByTitleContainingIgnoreCase(String title);
 }
