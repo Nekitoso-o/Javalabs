@@ -33,7 +33,6 @@ public class Comic {
     )
     private Set<Genre> genres;
 
-    // OneToMany: Если удаляем комикс, удаляются и его отзывы (CascadeType.ALL)
     @OneToMany(mappedBy = "comic", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews;
 }

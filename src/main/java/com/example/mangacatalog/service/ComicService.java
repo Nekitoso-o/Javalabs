@@ -81,7 +81,6 @@ public class ComicService {
         comicRepository.deleteById(id);
     }
 
-
     @Transactional(readOnly = true)
     public void demonstrateNPlusOne() {
         log.info("--- СТАРТ: Проблема N+1 ---");
