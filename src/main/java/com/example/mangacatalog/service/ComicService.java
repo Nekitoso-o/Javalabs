@@ -37,6 +37,7 @@ public class ComicService {
         if (dto.getAuthor() != null && dto.getAuthor().getId() != null) {
             Author author = authorRepository.findById(dto.getAuthor().getId())
                 .orElseThrow(() -> new IllegalArgumentException("Author not found!"));
+            comic.setAuthor(author);
         }
 
         if (dto.getPublisher() != null && dto.getPublisher().getId() != null) {
