@@ -36,20 +36,19 @@ public class ComicService {
 
         if (dto.getAuthor() != null && dto.getAuthor().getId() != null) {
             Author author = authorRepository.findById(dto.getAuthor().getId())
-                .orElseThrow(() -> new RuntimeException("Author not found!"));
-            comic.setAuthor(author);
+                .orElseThrow(() -> new IllegalArgumentException("Author not found!"));
         }
 
         if (dto.getPublisher() != null && dto.getPublisher().getId() != null) {
             Publisher publisher = publisherRepository.findById(dto.getPublisher().getId())
-                .orElseThrow(() -> new RuntimeException("Publisher not found!"));
+                .orElseThrow(() -> new IllegalArgumentException("Publisher not found!"));
             comic.setPublisher(publisher);
         }
 
         if (dto.getGenres() != null && !dto.getGenres().isEmpty()) {
             Set<Genre> genres = dto.getGenres().stream()
                 .map(genreDto -> genreRepository.findById(genreDto.getId())
-                    .orElseThrow(() -> new RuntimeException("Genre with ID " + genreDto.getId() + " not found!")))
+                    .orElseThrow(() -> new IllegalArgumentException("Genre with ID " + genreDto.getId() + " not found!")))
                 .collect(Collectors.toSet());
             comic.setGenres(genres);
         }
@@ -66,7 +65,7 @@ public class ComicService {
 
     public ComicDto getById(Long id) {
         Comic comic = comicRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Comic not found!"));
+            .orElseThrow(() -> new IllegalArgumentException("Comic not found!"));
         return comicMapper.toDto(comic);
     }
 
@@ -88,7 +87,7 @@ public class ComicService {
         List<Comic> comics = comicRepository.findAllWithNPlusOneProblem();
         for (Comic c : comics) {
             if (c.getAuthor() != null) {
-                System.out.println(c.getAuthor().getName());
+                log.info("Loaded author: {}", c.getAuthor().getName());
             }
         }
     }
@@ -99,40 +98,39 @@ public class ComicService {
         List<Comic> comics = comicRepository.findAllWithoutNPlusOne();
         for (Comic c : comics) {
             if (c.getAuthor() != null) {
-                System.out.println(c.getAuthor().getName());
+                log.info("Loaded author: {}", c.getAuthor().getName());
             }
         }
     }
 
 
-
     public void saveDataWithoutTransaction() {
         Publisher pub = new Publisher();
         pub.setName("Test Publisher (No Transaction)");
-        publisherRepository.save(pub); // Сохранится в БД
+        publisherRepository.save(pub);
 
         Comic comic = new Comic();
         comic.setTitle("Test Comic");
         comic.setPublisher(pub);
 
         if (true) {
-            throw new RuntimeException("Внезапная ошибка при сохранении!");
+            throw new IllegalStateException("Внезапная ошибка при сохранении!");
         }
-        comicRepository.save(comic); // До этого шага код не дойдет
+        comicRepository.save(comic);
     }
 
     @Transactional
     public void saveDataWithTransaction() {
         Publisher pub = new Publisher();
         pub.setName("Test Publisher (With Transaction)");
-        publisherRepository.save(pub); // Пока висит в кэше транзакции
+        publisherRepository.save(pub);
 
         Comic comic = new Comic();
         comic.setTitle("Test Comic");
         comic.setPublisher(pub);
 
         if (true) {
-            throw new RuntimeException("Внезапная ошибка при сохранении! Всё будет откатано.");
+            throw new IllegalStateException("Внезапная ошибка при сохранении! Всё будет откатано.");
         }
         comicRepository.save(comic);
     }
