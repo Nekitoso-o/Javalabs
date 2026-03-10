@@ -1,33 +1,43 @@
 package com.example.mangacatalog.mapper;
-
 import com.example.mangacatalog.dto.ComicDto;
 import com.example.mangacatalog.entity.Comic;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import java.util.stream.Collectors;
 
 @Component
+@RequiredArgsConstructor
 public class ComicMapper {
 
+    private final AuthorMapper authorMapper;
+    private final PublisherMapper publisherMapper;
+    private final GenreMapper genreMapper;
+
     public ComicDto toDto(Comic entity) {
-        if (entity == null) {
-            return null;
-        }
+        if (entity == null) return null;
         ComicDto dto = new ComicDto();
         dto.setId(entity.getId());
         dto.setTitle(entity.getTitle());
-        dto.setAuthor(entity.getAuthor());
-        dto.setGenre(entity.getGenre());
+        dto.setReleaseYear(entity.getReleaseYear());
+
+        dto.setAuthor(authorMapper.toDto(entity.getAuthor()));
+        dto.setPublisher(publisherMapper.toDto(entity.getPublisher()));
+
+        if (entity.getGenres() != null) {
+            dto.setGenres(entity.getGenres().stream()
+                .map(genreMapper::toDto)
+                .collect(Collectors.toSet()));
+        }
         return dto;
     }
 
+
     public Comic toEntity(ComicDto dto) {
-        if (dto == null) {
-            return null;
-        }
+        if (dto == null) return null;
         Comic entity = new Comic();
         entity.setId(dto.getId());
         entity.setTitle(dto.getTitle());
-        entity.setAuthor(dto.getAuthor());
-        entity.setGenre(dto.getGenre());
+        entity.setReleaseYear(dto.getReleaseYear());
         return entity;
     }
 }
