@@ -24,6 +24,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ComicService {
 
+    private static final String COMIC_NOT_FOUND = "Comic not found!";
+    private static final String NOT_FOUND_SUFFIX = " not found!";
+    private static final String AUTHOR_NOT_FOUND = "Author not found!";
+    private static final String PUBLISHER_NOT_FOUND = "Publisher not found!";
+    private static final String GENRE_NOT_FOUND = "Genre not found!";
+
     private final ComicRepository comicRepository;
     private final PublisherRepository publisherRepository;
     private final AuthorRepository authorRepository;
@@ -38,7 +44,7 @@ public class ComicService {
             Set<Author> authors = dto.getAuthors().stream()
                 .map(authorDto -> authorRepository.findById(authorDto.getId())
                     .orElseThrow(() -> new IllegalArgumentException(
-                        "Author with ID " + authorDto.getId() + " not found!")))
+                        "Author with ID " + authorDto.getId() + NOT_FOUND_SUFFIX)))
                 .collect(Collectors.toSet());
             comic.setAuthors(authors);
         }
@@ -47,7 +53,7 @@ public class ComicService {
             Set<Publisher> publishers = dto.getPublishers().stream()
                 .map(pubDto -> publisherRepository.findById(pubDto.getId())
                     .orElseThrow(() -> new IllegalArgumentException(
-                        "Publisher with ID " + pubDto.getId() + " not found!")))
+                        "Publisher with ID " + pubDto.getId() + NOT_FOUND_SUFFIX)))
                 .collect(Collectors.toSet());
             comic.setPublishers(publishers);
         }
@@ -56,7 +62,7 @@ public class ComicService {
             Set<Genre> genres = dto.getGenres().stream()
                 .map(genreDto -> genreRepository.findById(genreDto.getId())
                     .orElseThrow(() -> new IllegalArgumentException(
-                        "Genre with ID " + genreDto.getId() + " not found!")))
+                        "Genre with ID " + genreDto.getId() + NOT_FOUND_SUFFIX)))
                 .collect(Collectors.toSet());
             comic.setGenres(genres);
         }
@@ -73,7 +79,7 @@ public class ComicService {
 
     public ComicDto getById(Long id) {
         Comic comic = comicRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Comic not found!"));
+            .orElseThrow(() -> new IllegalArgumentException(COMIC_NOT_FOUND));
         return comicMapper.toDto(comic);
     }
 
@@ -91,7 +97,7 @@ public class ComicService {
     @Transactional
     public ComicDto update(Long id, ComicDto dto) {
         Comic existing = comicRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Comic not found!"));
+            .orElseThrow(() -> new IllegalArgumentException(COMIC_NOT_FOUND));
 
         existing.setTitle(dto.getTitle());
         existing.setReleaseYear(dto.getReleaseYear());
@@ -99,7 +105,7 @@ public class ComicService {
         if (dto.getAuthors() != null) {
             Set<Author> authors = dto.getAuthors().stream()
                 .map(a -> authorRepository.findById(a.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("Author not found!")))
+                    .orElseThrow(() -> new IllegalArgumentException(AUTHOR_NOT_FOUND)))
                 .collect(Collectors.toSet());
             existing.setAuthors(authors);
         }
@@ -107,7 +113,7 @@ public class ComicService {
         if (dto.getPublishers() != null) {
             Set<Publisher> publishers = dto.getPublishers().stream()
                 .map(p -> publisherRepository.findById(p.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("Publisher not found!")))
+                    .orElseThrow(() -> new IllegalArgumentException(PUBLISHER_NOT_FOUND)))
                 .collect(Collectors.toSet());
             existing.setPublishers(publishers);
         }
@@ -115,7 +121,7 @@ public class ComicService {
         if (dto.getGenres() != null) {
             Set<Genre> genres = dto.getGenres().stream()
                 .map(g -> genreRepository.findById(g.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("Genre not found!")))
+                    .orElseThrow(() -> new IllegalArgumentException(GENRE_NOT_FOUND)))
                 .collect(Collectors.toSet());
             existing.setGenres(genres);
         }
@@ -126,7 +132,7 @@ public class ComicService {
     @Transactional
     public ComicDto patch(Long id, ComicDto dto) {
         Comic existing = comicRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Comic not found!"));
+            .orElseThrow(() -> new IllegalArgumentException(COMIC_NOT_FOUND));
 
         if (dto.getTitle() != null) {
             existing.setTitle(dto.getTitle());
@@ -138,7 +144,7 @@ public class ComicService {
         if (dto.getAuthors() != null && !dto.getAuthors().isEmpty()) {
             Set<Author> authors = dto.getAuthors().stream()
                 .map(a -> authorRepository.findById(a.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("Author not found!")))
+                    .orElseThrow(() -> new IllegalArgumentException(AUTHOR_NOT_FOUND)))
                 .collect(Collectors.toSet());
             existing.setAuthors(authors);
         }
@@ -146,7 +152,7 @@ public class ComicService {
         if (dto.getPublishers() != null && !dto.getPublishers().isEmpty()) {
             Set<Publisher> publishers = dto.getPublishers().stream()
                 .map(p -> publisherRepository.findById(p.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("Publisher not found!")))
+                    .orElseThrow(() -> new IllegalArgumentException(PUBLISHER_NOT_FOUND)))
                 .collect(Collectors.toSet());
             existing.setPublishers(publishers);
         }
@@ -154,7 +160,7 @@ public class ComicService {
         if (dto.getGenres() != null && !dto.getGenres().isEmpty()) {
             Set<Genre> genres = dto.getGenres().stream()
                 .map(g -> genreRepository.findById(g.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("Genre not found!")))
+                    .orElseThrow(() -> new IllegalArgumentException(GENRE_NOT_FOUND)))
                 .collect(Collectors.toSet());
             existing.setGenres(genres);
         }
