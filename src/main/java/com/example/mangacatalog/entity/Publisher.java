@@ -4,17 +4,20 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 import java.util.List;
 
 @Entity
 @Table(name = "publishers")
-@Getter @Setter @NoArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
 public class Publisher {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
 
-    @OneToMany(mappedBy = "publisher", fetch = FetchType.LAZY)
+    @ManyToMany(mappedBy = "publishers", fetch = FetchType.LAZY)
     private List<Comic> comics;
 }

@@ -14,7 +14,7 @@ public interface ComicRepository extends JpaRepository<Comic, Long> {
     @Query("SELECT c FROM Comic c")
     List<Comic> findAllWithNPlusOneProblem();
 
-    @EntityGraph(attributePaths = {"author", "publisher", "genres"})
+    @EntityGraph(attributePaths = {"authors", "publisher", "genres"})
     @Query("SELECT c FROM Comic c")
     List<Comic> findAllWithoutNPlusOne();
 

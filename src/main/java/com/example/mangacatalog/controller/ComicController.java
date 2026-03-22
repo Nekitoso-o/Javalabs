@@ -71,4 +71,14 @@ public class ComicController {
         }
         return "Success";
     }
+
+    @PutMapping("/{id}")
+    public ComicDto update(@PathVariable Long id, @RequestBody ComicDto dto) {
+        return comicService.update(id, dto);
+    }
+
+    @PatchMapping("/{id}")
+    public ComicDto patch(@PathVariable Long id, @RequestBody ComicDto dto) {
+        return comicService.patch(id, dto);
+    }
 }

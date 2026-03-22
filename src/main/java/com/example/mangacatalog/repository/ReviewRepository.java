@@ -1,6 +1,12 @@
 package com.example.mangacatalog.repository;
-import com.example.mangacatalog.entity.*;
+
+import com.example.mangacatalog.entity.Review;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-@Repository public interface ReviewRepository extends JpaRepository<Review, Long> {}
+import java.util.List;
+
+@Repository
+public interface ReviewRepository extends JpaRepository<Review, Long> {
+    List<Review> findByComicId(Long comicId);
+}

@@ -7,7 +7,9 @@ import org.springframework.stereotype.Component;
 public class PublisherMapper {
 
     public PublisherDto toDto(Publisher entity) {
-        if (entity == null) return null;
+        if (entity == null) {
+            return null;
+        }
         PublisherDto dto = new PublisherDto();
         dto.setId(entity.getId());
         dto.setName(entity.getName());
@@ -15,7 +17,9 @@ public class PublisherMapper {
     }
 
     public Publisher toEntity(PublisherDto dto) {
-        if (dto == null) return null;
+        if (dto == null) {
+            return null;
+        }
         Publisher entity = new Publisher();
         entity.setId(dto.getId());
         entity.setName(dto.getName());

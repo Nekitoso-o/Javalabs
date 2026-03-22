@@ -1,4 +1,5 @@
 package com.example.mangacatalog.dto;
+
 import lombok.Data;
 
 @Data

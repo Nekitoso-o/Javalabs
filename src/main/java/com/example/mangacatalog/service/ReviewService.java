@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class ReviewService {
@@ -27,5 +28,17 @@ public class ReviewService {
         review.setComic(comic);
 
         return reviewMapper.toDto(reviewRepository.save(review));
+    }
+
+    public List<ReviewDto> getAllReviews() {
+        return reviewRepository.findAll().stream()
+            .map(reviewMapper::toDto)
+            .toList();
+    }
+
+    public List<ReviewDto> getReviewsByComicId(Long comicId) {
+        return reviewRepository.findByComicId(comicId).stream()
+            .map(reviewMapper::toDto)
+            .toList();
     }
 }
