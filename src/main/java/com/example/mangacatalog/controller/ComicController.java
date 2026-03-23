@@ -4,15 +4,14 @@ import com.example.mangacatalog.dto.ComicDto;
 import com.example.mangacatalog.service.ComicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/comics")
 @RequiredArgsConstructor
 public class ComicController {
-
     private final ComicService comicService;
+
     @PostMapping
     public ComicDto create(@RequestBody ComicDto dto) {
         return comicService.create(dto);
@@ -38,7 +37,6 @@ public class ComicController {
         comicService.delete(id);
         return "Comic deleted successfully";
     }
-
 
     @GetMapping("/demo/n-plus-one")
     public String testNPlusOne() {

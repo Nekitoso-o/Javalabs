@@ -1,4 +1,5 @@
 package com.example.mangacatalog.controller;
+
 import com.example.mangacatalog.dto.AuthorDto;
 import com.example.mangacatalog.service.AuthorService;
 import lombok.RequiredArgsConstructor;
@@ -19,5 +20,11 @@ public class AuthorController {
     @PostMapping
     public AuthorDto create(@RequestBody AuthorDto dto) {
         return service.create(dto);
+    }
+
+    @DeleteMapping("/{id}")
+    public String delete(@PathVariable Long id) {
+        service.delete(id);
+        return "Author deleted successfully";
     }
 }
