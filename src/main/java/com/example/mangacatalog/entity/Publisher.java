@@ -15,8 +15,9 @@ public class Publisher {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String name;
 
-    @ManyToMany(mappedBy = "publishers", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "publisher", cascade = CascadeType.ALL)
     private List<Comic> comics;
 }

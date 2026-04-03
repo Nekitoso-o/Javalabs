@@ -16,24 +16,17 @@ public class Comic {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String title;
     private Integer releaseYear;
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @JoinTable(
-        name = "comic_authors",
-        joinColumns = @JoinColumn(name = "comic_id"),
-        inverseJoinColumns = @JoinColumn(name = "author_id")
-    )
-    private Set<Author> authors;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id")
+    private Author author;
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @JoinTable(
-        name = "comic_publishers",
-        joinColumns = @JoinColumn(name = "comic_id"),
-        inverseJoinColumns = @JoinColumn(name = "publisher_id")
-    )
-    private Set<Publisher> publishers;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "publisher_id")
+    private Publisher publisher;
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(

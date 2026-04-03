@@ -14,6 +14,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class PublisherService {
+
     private final PublisherRepository repository;
     private final PublisherMapper mapper;
 
@@ -27,15 +28,14 @@ public class PublisherService {
         return mapper.toDto(saved);
     }
 
-
     @Transactional
     public void delete(Long id) {
-        Publisher publisher = repository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Publisher not found!"));
+        Publisher publisher = repository
+            .findById(id).orElseThrow(() -> new IllegalArgumentException("Publisher not found!"));
 
         if (publisher.getComics() != null) {
             for (Comic comic : publisher.getComics()) {
-                comic.getPublishers().remove(publisher);
+                comic.setPublisher(null);
             }
         }
 

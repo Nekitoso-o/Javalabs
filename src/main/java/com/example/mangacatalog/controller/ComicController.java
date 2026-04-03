@@ -38,11 +38,6 @@ public class ComicController {
         return "Comic deleted successfully";
     }
 
-    @GetMapping("/demo/n-plus-one")
-    public String testNPlusOne() {
-        comicService.demonstrateNPlusOne();
-        return "Check console logs for multiple SELECTs";
-    }
 
     @GetMapping("/demo/entity-graph")
     public String testEntityGraph() {
