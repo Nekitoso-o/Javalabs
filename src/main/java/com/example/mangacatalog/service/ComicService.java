@@ -158,14 +158,14 @@ public class ComicService {
 
 
     @Transactional(readOnly = true)
-    public void demonstrateEntityGraph() {
+    public List<ComicDto> demonstrateEntityGraph() {
         log.info("--- СТАРТ: Решение с @EntityGraph ---");
+
         List<Comic> comics = comicRepository.findAllWithoutNPlusOne();
-        for (Comic c : comics) {
-            if (c.getAuthor() != null) {
-                log.info("Loaded author: {}", c.getAuthor().getName());
-            }
-        }
+
+        return comics.stream()
+            .map(comicMapper::toDto)
+            .toList();
     }
 
     public void saveDataWithoutTransaction() {

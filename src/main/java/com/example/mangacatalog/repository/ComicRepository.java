@@ -11,7 +11,6 @@ import java.util.List;
 @Repository
 public interface ComicRepository extends JpaRepository<Comic, Long> {
 
-    @EntityGraph(attributePaths = {"author", "publisher", "genres"})
     @Query("SELECT c FROM Comic c")
     List<Comic> findAllWithoutNPlusOne();
 

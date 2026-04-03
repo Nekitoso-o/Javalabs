@@ -40,11 +40,9 @@ public class ComicController {
 
 
     @GetMapping("/demo/entity-graph")
-    public String testEntityGraph() {
-        comicService.demonstrateEntityGraph();
-        return "Check console logs for a single JOIN SELECT";
+    public List<ComicDto> testEntityGraph() {
+        return comicService.demonstrateEntityGraph();
     }
-
     @PostMapping("/demo/no-transaction")
     public String testNoTransaction() {
         try {
