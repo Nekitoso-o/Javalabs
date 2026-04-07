@@ -1,9 +1,11 @@
 package com.example.mangacatalog.dto;
 
-import lombok.Data;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-@Data
-public class AuthorDto {
-    private Long id;
-    private String name;
+@Schema(description = "Данные автора")
+public record AuthorDto(
+    Long id,
+    String name
+) {
+
 }

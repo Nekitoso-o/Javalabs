@@ -1,47 +1,54 @@
 package com.example.mangacatalog.controller;
 
 import com.example.mangacatalog.dto.GenreDto;
+import com.example.mangacatalog.dto.GenreRequest;
 import com.example.mangacatalog.service.GenreService;
-import lombok.RequiredArgsConstructor;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/genres")
-@RequiredArgsConstructor
+@Tag(name = "Жанры", description = "API для управления жанрами комиксов")
 public class GenreController {
 
     private final GenreService service;
 
+    public GenreController(GenreService service) {
+        this.service = service;
+    }
+
     @GetMapping
+    @Operation(summary = "Получить список всех жанров")
     public List<GenreDto> getAll() {
         return service.getAll();
     }
 
     @GetMapping("/{id}")
-    public GenreDto getById(@PathVariable Long id) {
+    @Operation(summary = "Получить жанр по ID")
+    public GenreDto getById(@PathVariable("id") Long id) {
         return service.getById(id);
     }
 
     @PostMapping
-    public GenreDto create(@RequestBody GenreDto dto) {
-        return service.create(dto);
+    @Operation(summary = "Создать новый жанр")
+    public GenreDto create(@Valid @RequestBody GenreRequest request) {
+        return service.create(request);
     }
 
     @PutMapping("/{id}")
-    public GenreDto update(@PathVariable Long id, @RequestBody GenreDto dto) {
-        return service.update(id, dto);
-    }
-
-    @PatchMapping("/{id}")
-    public GenreDto patch(@PathVariable Long id, @RequestBody GenreDto dto) {
-        return service.patch(id, dto);
+    @Operation(summary = "Обновить название жанра")
+    public GenreDto update(@PathVariable("id") Long id, @Valid @RequestBody GenreRequest request) {
+        return service.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public String delete(@PathVariable Long id) {
+    @Operation(summary = "Удалить жанр")
+    public String delete(@PathVariable("id") Long id) {
         service.delete(id);
-        return "Genre deleted successfully";
+        return "Жанр успешно удален";
     }
 }

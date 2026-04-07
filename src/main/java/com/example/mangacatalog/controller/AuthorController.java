@@ -1,47 +1,54 @@
 package com.example.mangacatalog.controller;
 
 import com.example.mangacatalog.dto.AuthorDto;
+import com.example.mangacatalog.dto.AuthorRequest;
 import com.example.mangacatalog.service.AuthorService;
-import lombok.RequiredArgsConstructor;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/authors")
-@RequiredArgsConstructor
+@Tag(name = "Авторы", description = "API для управления авторами")
 public class AuthorController {
 
     private final AuthorService service;
 
+    public AuthorController(AuthorService service) {
+        this.service = service;
+    }
+
     @GetMapping
+    @Operation(summary = "Получить список всех авторов")
     public List<AuthorDto> getAll() {
         return service.getAll();
     }
 
     @GetMapping("/{id}")
-    public AuthorDto getById(@PathVariable Long id) {
+    @Operation(summary = "Получить автора по ID")
+    public AuthorDto getById(@PathVariable("id") Long id) {
         return service.getById(id);
     }
 
     @PostMapping
-    public AuthorDto create(@RequestBody AuthorDto dto) {
-        return service.create(dto);
+    @Operation(summary = "Создать нового автора")
+    public AuthorDto create(@Valid @RequestBody AuthorRequest request) {
+        return service.create(request);
     }
 
     @PutMapping("/{id}")
-    public AuthorDto update(@PathVariable Long id, @RequestBody AuthorDto dto) {
-        return service.update(id, dto);
-    }
-
-    @PatchMapping("/{id}")
-    public AuthorDto patch(@PathVariable Long id, @RequestBody AuthorDto dto) {
-        return service.patch(id, dto);
+    @Operation(summary = "Обновить данные автора")
+    public AuthorDto update(@PathVariable("id") Long id, @Valid @RequestBody AuthorRequest request) {
+        return service.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public String delete(@PathVariable Long id) {
+    @Operation(summary = "Удалить автора")
+    public String delete(@PathVariable("id") Long id) {
         service.delete(id);
-        return "Author deleted successfully";
+        return "Автор успешно удален";
     }
 }

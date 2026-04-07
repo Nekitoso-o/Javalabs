@@ -14,41 +14,16 @@ public class ComicMapper {
     private final GenreMapper genreMapper;
 
     public ComicDto toDto(Comic entity) {
-        if (entity == null) {
-            return null;
-        }
+        if (entity == null) return null;
 
-        ComicDto dto = new ComicDto();
-        dto.setId(entity.getId());
-        dto.setTitle(entity.getTitle());
-        dto.setReleaseYear(entity.getReleaseYear());
-
-        if (entity.getAuthor() != null) {
-            dto.setAuthor(authorMapper.toDto(entity.getAuthor()));
-        }
-
-        if (entity.getPublisher() != null) {
-            dto.setPublisher(publisherMapper.toDto(entity.getPublisher()));
-        }
-
-        if (entity.getGenres() != null) {
-            dto.setGenres(entity.getGenres().stream()
-                .map(genreMapper::toDto)
-                .collect(Collectors.toSet()));
-        }
-
-        return dto;
-    }
-
-    public Comic toEntity(ComicDto dto) {
-        if (dto == null) {
-            return null;
-        }
-
-        Comic entity = new Comic();
-        entity.setId(dto.getId());
-        entity.setTitle(dto.getTitle());
-        entity.setReleaseYear(dto.getReleaseYear());
-        return entity;
+        return new ComicDto(
+            entity.getId(),
+            entity.getTitle(),
+            entity.getReleaseYear(),
+            authorMapper.toDto(entity.getAuthor()),
+            publisherMapper.toDto(entity.getPublisher()),
+            entity.getGenres() != null ?
+                entity.getGenres().stream().map(genreMapper::toDto).collect(Collectors.toSet()) : null
+        );
     }
 }

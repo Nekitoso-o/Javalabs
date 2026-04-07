@@ -1,9 +1,8 @@
 package com.example.mangacatalog.dto;
 
-import lombok.Data;
+public record PublisherDto(
+    Long id,
+    String name
+) {
 
-@Data
-public class PublisherDto {
-    private Long id;
-    private String name;
 }

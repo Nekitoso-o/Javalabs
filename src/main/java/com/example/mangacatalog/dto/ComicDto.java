@@ -1,14 +1,16 @@
 package com.example.mangacatalog.dto;
 
-import lombok.Data;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Set;
 
-@Data
-public class ComicDto {
-    private Long id;
-    private String title;
-    private Integer releaseYear;
-    private AuthorDto author;
-    private PublisherDto publisher;
-    private Set<GenreDto> genres;
+@Schema(description = "Ответ с данными о комиксе")
+public record ComicDto(
+    Long id,
+    String title,
+    Integer releaseYear,
+    AuthorDto author,
+    PublisherDto publisher,
+    Set<GenreDto> genres
+) {
+
 }

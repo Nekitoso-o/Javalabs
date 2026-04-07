@@ -1,75 +1,102 @@
 package com.example.mangacatalog.controller;
 
 import com.example.mangacatalog.dto.ComicDto;
+import com.example.mangacatalog.dto.ComicRequest;
 import com.example.mangacatalog.service.ComicService;
-import lombok.RequiredArgsConstructor;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/comics")
-@RequiredArgsConstructor
+@Tag(name = "Комиксы", description = "Основной API для управления каталогом комиксов и манги")
 public class ComicController {
+
     private final ComicService comicService;
 
-    @PostMapping
-    public ComicDto create(@RequestBody ComicDto dto) {
-        return comicService.create(dto);
+    public ComicController(ComicService comicService) {
+        this.comicService = comicService;
     }
 
     @GetMapping
+    @Operation(summary = "Получить список всех комиксов")
     public List<ComicDto> getAll() {
         return comicService.getAll();
     }
 
     @GetMapping("/{id}")
-    public ComicDto getById(@PathVariable Long id) {
+    @Operation(summary = "Получить комикс по ID")
+    public ComicDto getById(@PathVariable("id") Long id) {
         return comicService.getById(id);
     }
 
     @GetMapping("/search")
-    public List<ComicDto> search(@RequestParam String title) {
+    @Operation(summary = "Простой поиск комиксов по названию")
+    public List<ComicDto> search(@RequestParam("title") String title) {
         return comicService.searchByTitle(title);
     }
 
-    @DeleteMapping("/{id}")
-    public String delete(@PathVariable Long id) {
-        comicService.delete(id);
-        return "Comic deleted successfully";
+    @GetMapping("/author/{authorId}")
+    @Operation(summary = "Получить все комиксы конкретного автора")
+    public List<ComicDto> getComicsByAuthor(@PathVariable("authorId") Long authorId) {
+        return comicService.getComicsByAuthor(authorId);
     }
 
-
-    @GetMapping("/demo/entity-graph")
-    public List<ComicDto> testEntityGraph() {
-        return comicService.demonstrateEntityGraph();
-    }
-    @PostMapping("/demo/no-transaction")
-    public String testNoTransaction() {
-        try {
-            comicService.saveDataWithoutTransaction();
-        } catch (Exception e) {
-            return "Error occurred! Check DB - Publisher WAS saved.";
-        }
-        return "Success";
+    @GetMapping("/complex-search")
+    @Operation(summary = "Сложный поиск (Жанр + Год) с пагинацией и кэшированием")
+    public List<ComicDto> searchComplex(
+        @RequestParam("genreName") String genreName,
+        @RequestParam("minYear") Integer minYear,
+        @RequestParam(value = "page", defaultValue = "0") int page,
+        @RequestParam(value = "size", defaultValue = "5") int size,
+        @RequestParam(value = "useNative", defaultValue = "false") boolean useNative) {
+        return comicService.searchComplex(genreName, minYear, page, size, useNative);
     }
 
-    @PostMapping("/demo/with-transaction")
-    public String testWithTransaction() {
-        try {
-            comicService.saveDataWithTransaction();
-        } catch (Exception e) {
-            return "Error occurred! Check DB - Publisher WAS NOT saved (Rollback successful).";
-        }
-        return "Success";
+    @PostMapping
+    @Operation(summary = "Добавить новый комикс в каталог")
+    public ComicDto create(@Valid @RequestBody ComicRequest request) {
+        return comicService.create(request);
     }
 
     @PutMapping("/{id}")
-    public ComicDto update(@PathVariable Long id, @RequestBody ComicDto dto) {
-        return comicService.update(id, dto);
+    @Operation(summary = "Обновить данные комикса")
+    public ComicDto update(@PathVariable("id") Long id, @Valid @RequestBody ComicRequest request) {
+        return comicService.update(id, request);
     }
 
-    @PatchMapping("/{id}")
-    public ComicDto patch(@PathVariable Long id, @RequestBody ComicDto dto) {
-        return comicService.patch(id, dto);
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Удалить комикс из каталога")
+    public String delete(@PathVariable("id") Long id) {
+        comicService.delete(id);
+        return "Комикс успешно удален";
     }
+
+
+
+    @PostMapping("/demo/no-transaction")
+    @Operation(summary = "Демо: Сохранение БЕЗ транзакции (Ожидается частичное сохранение в БД)")
+    public String testNoTransaction() {
+        try {
+            comicService.saveDataWithoutTransaction();
+            return "Успешно";
+        } catch (IllegalStateException e) {
+            return "Ошибка поймана: ";
+        }
+    }
+
+    @PostMapping("/demo/with-transaction")
+    @Operation(summary = "Демо: Сохранение С транзакцией (Ожидается полный Rollback)")
+    public String testWithTransaction() {
+        try {
+            comicService.saveDataWithTransaction();
+            return "Успешно";
+        } catch (IllegalStateException e) {
+            return "Ошибка поймана: " ;
+        }
+    }
+
 }
