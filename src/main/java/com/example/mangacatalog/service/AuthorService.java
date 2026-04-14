@@ -8,8 +8,8 @@ import com.example.mangacatalog.entity.Author;
 import com.example.mangacatalog.entity.Comic;
 import com.example.mangacatalog.mapper.AuthorMapper;
 import com.example.mangacatalog.repository.AuthorRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,17 +17,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class AuthorService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AuthorService.class);
+
     private final AuthorRepository repository;
     private final AuthorMapper mapper;
-
     private final Map<ApiCacheKey, Object> cache = new ConcurrentHashMap<>();
 
+    public AuthorService(AuthorRepository repository, AuthorMapper mapper) {
+        this.repository = repository;
+        this.mapper = mapper;
+    }
+
     private void invalidateCache() {
-        log.info("♻ Инвалидация: Очистка In-Memory кеша Авторов.");
+        LOG.info("Инвалидация: Очистка In-Memory кеша Авторов.");
         cache.clear();
     }
 
@@ -35,10 +40,10 @@ public class AuthorService {
     public List<AuthorDto> getAll() {
         ApiCacheKey key = new ApiCacheKey("getAllAuthors");
         if (cache.containsKey(key)) {
-            log.info("Кэш ХИТ Авторы: {}", key);
+            LOG.info("Кэш ХИТ Авторы: {}", key);
             return (List<AuthorDto>) cache.get(key);
         }
-        log.info("Кэш МИСС Авторы. Запрос к БД");
+        LOG.info("Кэш МИСС Авторы. Запрос к БД");
         List<AuthorDto> result = repository.findAll().stream().map(mapper::toDto).toList();
         cache.put(key, result);
         return result;
@@ -47,10 +52,10 @@ public class AuthorService {
     public AuthorDto getById(Long id) {
         ApiCacheKey key = new ApiCacheKey("getAuthorById", id);
         if (cache.containsKey(key)) {
-            log.info("Кэш ХИТ Авторы: {}", key);
+            LOG.info("Кэш ХИТ Авторы: {}", key);
             return (AuthorDto) cache.get(key);
         }
-        log.info("Кэш МИСС Авторы. Запрос к БД для ID: {}", id);
+        LOG.info("Кэш МИСС Авторы. Запрос к БД для ID: {}", id);
         Author author = repository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Автор с ID " + id + " не найден!"));
         AuthorDto result = mapper.toDto(author);
@@ -81,7 +86,6 @@ public class AuthorService {
     public void delete(Long id) {
         Author author = repository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Автор с ID " + id + " не найден!"));
-
         if (author.getComics() != null) {
             for (Comic comic : author.getComics()) {
                 comic.setAuthor(null);

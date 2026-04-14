@@ -2,19 +2,26 @@ package com.example.mangacatalog.mapper;
 
 import com.example.mangacatalog.dto.ComicDto;
 import com.example.mangacatalog.entity.Comic;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+
 import java.util.stream.Collectors;
 
 @Component
-@RequiredArgsConstructor
 public class ComicMapper {
     private final AuthorMapper authorMapper;
     private final PublisherMapper publisherMapper;
     private final GenreMapper genreMapper;
 
+    public ComicMapper(AuthorMapper authorMapper, PublisherMapper publisherMapper, GenreMapper genreMapper) {
+        this.authorMapper = authorMapper;
+        this.publisherMapper = publisherMapper;
+        this.genreMapper = genreMapper;
+    }
+
     public ComicDto toDto(Comic entity) {
-        if (entity == null) return null;
+        if (entity == null) {
+            return null;
+        }
 
         return new ComicDto(
             entity.getId(),

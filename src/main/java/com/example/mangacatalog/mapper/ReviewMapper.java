@@ -7,7 +7,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReviewMapper {
     public ReviewDto toDto(Review entity) {
-        if (entity == null) return null;
+        if (entity == null) {
+            return null;
+        }
         Long comicId = entity.getComic() != null ? entity.getComic().getId() : null;
         return new ReviewDto(entity.getId(), entity.getText(), entity.getRating(), comicId);
     }

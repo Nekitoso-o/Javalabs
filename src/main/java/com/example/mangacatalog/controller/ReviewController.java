@@ -1,6 +1,7 @@
 package com.example.mangacatalog.controller;
 
 import com.example.mangacatalog.dto.ReviewDto;
+import com.example.mangacatalog.dto.ReviewPatchRequest;
 import com.example.mangacatalog.dto.ReviewRequest;
 import com.example.mangacatalog.service.ReviewService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,5 +57,11 @@ public class ReviewController {
     public String delete(@PathVariable("id") Long id) {
         service.delete(id);
         return "Отзыв успешно удален";
+    }
+
+    @PatchMapping("/{id}")
+    @Operation(summary = "Частично обновить существующий отзыв")
+    public ReviewDto patch(@PathVariable("id") Long id, @Valid @RequestBody ReviewPatchRequest request) {
+        return service.patch(id, request);
     }
 }

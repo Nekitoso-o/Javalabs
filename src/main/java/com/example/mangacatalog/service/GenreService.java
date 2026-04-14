@@ -8,8 +8,8 @@ import com.example.mangacatalog.entity.Comic;
 import com.example.mangacatalog.entity.Genre;
 import com.example.mangacatalog.mapper.GenreMapper;
 import com.example.mangacatalog.repository.GenreRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,17 +17,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class GenreService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(GenreService.class);
+
     private final GenreRepository repository;
     private final GenreMapper mapper;
-
     private final Map<ApiCacheKey, Object> cache = new ConcurrentHashMap<>();
 
+    public GenreService(GenreRepository repository, GenreMapper mapper) {
+        this.repository = repository;
+        this.mapper = mapper;
+    }
+
     private void invalidateCache() {
-        log.info("Инвалидация: Очистка In-Memory кеша Жанров.");
+        LOG.info("Инвалидация: Очистка In-Memory кеша Жанров.");
         cache.clear();
     }
 
@@ -35,10 +40,10 @@ public class GenreService {
     public List<GenreDto> getAll() {
         ApiCacheKey key = new ApiCacheKey("getAllGenres");
         if (cache.containsKey(key)) {
-            log.info(" Кэш ХИТ Жанры: {}", key);
+            LOG.info(" Кэш ХИТ Жанры: {}", key);
             return (List<GenreDto>) cache.get(key);
         }
-        log.info(" Кэш МИСС Жанры. Запрос к БД");
+        LOG.info(" Кэш МИСС Жанры. Запрос к БД");
         List<GenreDto> result = repository.findAll().stream().map(mapper::toDto).toList();
         cache.put(key, result);
         return result;
@@ -47,10 +52,10 @@ public class GenreService {
     public GenreDto getById(Long id) {
         ApiCacheKey key = new ApiCacheKey("getGenreById", id);
         if (cache.containsKey(key)) {
-            log.info(" Кэш ХИТ Жанры: {}", key);
+            LOG.info(" Кэш ХИТ Жанры: {}", key);
             return (GenreDto) cache.get(key);
         }
-        log.info(" Кэш МИСС Жанры. Запрос к БД для ID: {}", id);
+        LOG.info(" Кэш МИСС Жанры. Запрос к БД для ID: {}", id);
         Genre genre = repository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Жанр с ID " + id + " не найден!"));
         GenreDto result = mapper.toDto(genre);
@@ -81,7 +86,6 @@ public class GenreService {
     public void delete(Long id) {
         Genre genre = repository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Жанр с ID " + id + " не найден!"));
-
         if (genre.getComics() != null) {
             for (Comic comic : genre.getComics()) {
                 comic.getGenres().remove(genre);

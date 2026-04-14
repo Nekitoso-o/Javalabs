@@ -14,22 +14,28 @@ public class ApiCacheKey {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         ApiCacheKey that = (ApiCacheKey) o;
-        return Objects.equals(operation, that.operation) &&
-            Arrays.deepEquals(params, that.params);
+        return Objects.equals(operation, that.operation) && Arrays.equals(params, that.params);
     }
 
     @Override
     public int hashCode() {
         int result = Objects.hash(operation);
-        result = 31 * result + Arrays.deepHashCode(params);
+        result = 31 * result + Arrays.hashCode(params);
         return result;
     }
 
     @Override
     public String toString() {
-        return String.format("[Операция='%s', Параметры=%s]", operation, Arrays.toString(params));
+        return "ApiCacheKey{" +
+            "operation='" + operation + '\'' +
+            ", params=" + Arrays.toString(params) +
+            '}';
     }
 }

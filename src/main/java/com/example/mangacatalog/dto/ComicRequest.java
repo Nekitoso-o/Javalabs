@@ -17,7 +17,6 @@ public record ComicRequest(
     @Max(value = 2100, message = "Некорректный год выпуска")
     Integer releaseYear,
 
-    // Обратите внимание: мы передаем только ID связанных сущностей!
     @NotNull(message = "У комикса должен быть автор (укажите ID)")
     Long authorId,
 

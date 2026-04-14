@@ -34,10 +34,6 @@ public interface ComicRepository extends JpaRepository<Comic, Long> {
 
 
     @EntityGraph(attributePaths = {"author", "publisher", "genres"})
-    @Query("SELECT c FROM Comic c")
-    List<Comic> findAllWithoutNPlusOne();
-
-    @EntityGraph(attributePaths = {"author", "publisher", "genres"})
     @Query("SELECT c FROM Comic c JOIN c.genres g WHERE g.name = :genreName AND c.releaseYear >= :minYear")
     List<Comic> findByGenreAndYearJpql(
         @Param("genreName") String genreName,

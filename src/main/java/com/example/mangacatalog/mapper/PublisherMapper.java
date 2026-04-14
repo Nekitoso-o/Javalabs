@@ -7,7 +7,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class PublisherMapper {
     public PublisherDto toDto(Publisher entity) {
-        if (entity == null) return null;
+        if (entity == null) {
+            return null;
+        }
         return new PublisherDto(entity.getId(), entity.getName());
     }
 }

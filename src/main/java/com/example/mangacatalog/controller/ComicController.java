@@ -1,7 +1,8 @@
 package com.example.mangacatalog.controller;
-
+import com.example.mangacatalog.dto.TransactionDemoDto;
 import com.example.mangacatalog.dto.ComicDto;
 import com.example.mangacatalog.dto.ComicRequest;
+import com.example.mangacatalog.dto.ComicPatchRequest;
 import com.example.mangacatalog.service.ComicService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,6 +46,7 @@ public class ComicController {
         return comicService.getComicsByAuthor(authorId);
     }
 
+
     @GetMapping("/complex-search")
     @Operation(summary = "Сложный поиск (Жанр + Год) с пагинацией и кэшированием")
     public List<ComicDto> searchComplex(
@@ -78,25 +80,27 @@ public class ComicController {
 
 
     @PostMapping("/demo/no-transaction")
-    @Operation(summary = "Демо: Сохранение БЕЗ транзакции (Ожидается частичное сохранение в БД)")
-    public String testNoTransaction() {
+    public String testNoTransaction(@RequestBody TransactionDemoDto dto) {
         try {
-            comicService.saveDataWithoutTransaction();
-            return "Успешно";
-        } catch (IllegalStateException e) {
-            return "Ошибка поймана: ";
+            comicService.saveDataWithoutTransaction(dto);
+        } catch (Exception e) {
+            return "Ошибка: " + e.getMessage() + " | Проверьте БД - Издатель БЫЛ сохранен!";
         }
+        return "Успех! Издатель и комикс сохранены.";
     }
 
     @PostMapping("/demo/with-transaction")
-    @Operation(summary = "Демо: Сохранение С транзакцией (Ожидается полный Rollback)")
-    public String testWithTransaction() {
+    public String testWithTransaction(@RequestBody TransactionDemoDto dto) {
         try {
-            comicService.saveDataWithTransaction();
-            return "Успешно";
-        } catch (IllegalStateException e) {
-            return "Ошибка поймана: " ;
+            comicService.saveDataWithTransaction(dto);
+        } catch (Exception e) {
+            return "Ошибка: " + e.getMessage() + " | Проверьте БД - Издатель НЕ сохранен (Rollback).";
         }
+        return "Успех! Издатель и комикс сохранены.";
     }
-
+    @PatchMapping("/{id}")
+    @Operation(summary = "Частично обновить данные комикса")
+    public ComicDto patch(@PathVariable("id") Long id, @Valid @RequestBody ComicPatchRequest request) {
+        return comicService.patch(id, request);
+    }
 }

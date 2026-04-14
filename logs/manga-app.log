@@ -1,0 +1,274 @@
+2026-04-14 20:11:58 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.1.Final
+2026-04-14 20:11:58 [main] INFO  c.e.m.MangacatalogApplication - Starting MangacatalogApplication using Java 25.0.2 with PID 41460 (C:\Users\drako\Downloads\mangacatalog (1)\mangacatalog\target\classes started by drako in C:\Users\drako\Downloads\mangacatalog (1)\mangacatalog)
+2026-04-14 20:11:58 [main] DEBUG c.e.m.MangacatalogApplication - Running with Spring Boot v3.2.2, Spring v6.1.3
+2026-04-14 20:11:58 [main] INFO  c.e.m.MangacatalogApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-14 20:11:59 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-14 20:11:59 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 26 ms. Found 5 JPA repository interfaces.
+2026-04-14 20:11:59 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-14 20:11:59 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-04-14 20:11:59 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-14 20:11:59 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.18]
+2026-04-14 20:11:59 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-14 20:11:59 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 919 ms
+2026-04-14 20:11:59 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-14 20:11:59 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.4.1.Final
+2026-04-14 20:11:59 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-04-14 20:12:00 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-14 20:12:00 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-04-14 20:12:00 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@4b85edeb
+2026-04-14 20:12:00 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-04-14 20:12:00 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-04-14 20:12:00 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-14 20:12:00 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-14 20:12:01 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-14 20:12:01 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-14 20:12:01 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-04-14 20:12:01 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path ''
+2026-04-14 20:12:01 [main] INFO  c.e.m.MangacatalogApplication - Started MangacatalogApplication in 3.175 seconds (process running for 3.859)
+2026-04-14 20:12:44 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-14 20:12:44 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-14 20:12:44 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-14 20:12:44 [http-nio-8080-exec-1] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. patch()
+2026-04-14 20:12:44 [http-nio-8080-exec-1] INFO  c.e.m.service.ComicService - ♻ Инвалидация: Очистка In-Memory кеша Комиксов.
+2026-04-14 20:12:44 [http-nio-8080-exec-1] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.patch() выполнен за 53 мс
+2026-04-14 20:12:55 [http-nio-8080-exec-3] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. update()
+2026-04-14 20:12:55 [http-nio-8080-exec-3] INFO  c.e.m.service.ComicService - ♻ Инвалидация: Очистка In-Memory кеша Комиксов.
+2026-04-14 20:12:55 [http-nio-8080-exec-3] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.update() выполнен за 6 мс
+2026-04-14 20:13:01 [http-nio-8080-exec-4] ERROR c.e.m.e.GlobalExceptionHandler - Критическая ошибка сервера: 
+org.springframework.http.converter.HttpMessageNotReadableException: JSON parse error: Unexpected character (',' (code 44)): expected a value
+	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.readJavaType(AbstractJackson2HttpMessageConverter.java:406)
+	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.read(AbstractJackson2HttpMessageConverter.java:354)
+	at org.springframework.web.servlet.mvc.method.annotation.AbstractMessageConverterMethodArgumentResolver.readWithMessageConverters(AbstractMessageConverterMethodArgumentResolver.java:184)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.readWithMessageConverters(RequestResponseBodyMethodProcessor.java:159)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.resolveArgument(RequestResponseBodyMethodProcessor.java:134)
+	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122)
+	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:225)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:178)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:917)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:829)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPut(FrameworkServlet.java:925)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:593)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:205)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:340)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1744)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:61)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: com.fasterxml.jackson.core.JsonParseException: Unexpected character (',' (code 44)): expected a value
+ at [Source: (org.springframework.util.StreamUtils$NonClosingInputStream); line: 5, column: 19]
+	at com.fasterxml.jackson.core.JsonParser._constructError(JsonParser.java:2477)
+	at com.fasterxml.jackson.core.base.ParserMinimalBase._reportError(ParserMinimalBase.java:750)
+	at com.fasterxml.jackson.core.base.ParserMinimalBase._reportUnexpectedChar(ParserMinimalBase.java:674)
+	at com.fasterxml.jackson.core.json.UTF8StreamJsonParser._handleUnexpectedValue(UTF8StreamJsonParser.java:2757)
+	at com.fasterxml.jackson.core.json.UTF8StreamJsonParser.nextToken(UTF8StreamJsonParser.java:859)
+	at com.fasterxml.jackson.databind.deser.BeanDeserializer._deserializeUsingPropertyBased(BeanDeserializer.java:423)
+	at com.fasterxml.jackson.databind.deser.BeanDeserializerBase.deserializeFromObjectUsingNonDefault(BeanDeserializerBase.java:1409)
+	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserializeFromObject(BeanDeserializer.java:352)
+	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserialize(BeanDeserializer.java:185)
+	at com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.readRootValue(DefaultDeserializationContext.java:323)
+	at com.fasterxml.jackson.databind.ObjectReader._bindAndClose(ObjectReader.java:2105)
+	at com.fasterxml.jackson.databind.ObjectReader.readValue(ObjectReader.java:1481)
+	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.readJavaType(AbstractJackson2HttpMessageConverter.java:395)
+	... 51 common frames omitted
+2026-04-14 20:13:15 [http-nio-8080-exec-6] WARN  c.e.m.e.GlobalExceptionHandler - Ошибка валидации данных
+2026-04-14 20:13:22 [http-nio-8080-exec-8] WARN  c.e.m.e.GlobalExceptionHandler - Ошибка валидации данных
+2026-04-14 20:13:42 [http-nio-8080-exec-10] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. update()
+2026-04-14 20:13:42 [http-nio-8080-exec-10] ERROR c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService. update() выбросил исключение: Автор с ID 10 не найден!
+2026-04-14 20:13:42 [http-nio-8080-exec-10] WARN  c.e.m.e.GlobalExceptionHandler - Ресурс не найден: Автор с ID 10 не найден!
+2026-04-14 20:20:19 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m18s815ms500µs100ns).
+2026-04-14 20:20:27 [http-nio-8080-exec-3] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. getById()
+2026-04-14 20:20:27 [http-nio-8080-exec-3] INFO  c.e.m.service.ComicService - 🐌 Кэш МИСС Комиксы. Запрос к БД для ID: 1
+2026-04-14 20:20:27 [http-nio-8080-exec-3] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.getById() выполнен за 12 мс
+2026-04-14 20:20:28 [http-nio-8080-exec-4] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. getById()
+2026-04-14 20:20:28 [http-nio-8080-exec-4] INFO  c.e.m.service.ComicService - ⚡ Кэш ХИТ Комиксы: ApiCacheKey{operation='getComicById', params=[1]}
+2026-04-14 20:20:28 [http-nio-8080-exec-4] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.getById() выполнен за 1 мс
+2026-04-14 20:31:51 [http-nio-8080-exec-6] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. searchComplex()
+2026-04-14 20:31:51 [http-nio-8080-exec-6] INFO  c.e.m.service.ComicService - 🐌 Кэш МИСС Комиксы. Запрос к БД (useNative=true)
+2026-04-14 20:31:51 [http-nio-8080-exec-6] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.searchComplex() выполнен за 34 мс
+2026-04-14 20:32:02 [http-nio-8080-exec-8] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. searchComplex()
+2026-04-14 20:32:02 [http-nio-8080-exec-8] INFO  c.e.m.service.ComicService - 🐌 Кэш МИСС Комиксы. Запрос к БД (useNative=true)
+2026-04-14 20:32:02 [http-nio-8080-exec-8] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.searchComplex() выполнен за 4 мс
+2026-04-14 20:32:17 [http-nio-8080-exec-9] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. searchComplex()
+2026-04-14 20:32:17 [http-nio-8080-exec-9] INFO  c.e.m.service.ComicService - ⚡ Кэш ХИТ Комиксы (Complex): ApiCacheKey{operation='searchComplex', params=[Супергеройка, 1980, 0, 2]}
+2026-04-14 20:32:17 [http-nio-8080-exec-9] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.searchComplex() выполнен за 0 мс
+2026-04-14 20:32:51 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-14 20:32:51 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-04-14 20:32:51 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2026-04-14 20:32:54 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.1.Final
+2026-04-14 20:32:54 [main] INFO  c.e.m.MangacatalogApplication - Starting MangacatalogApplication using Java 25.0.2 with PID 15652 (C:\Users\drako\Downloads\mangacatalog (1)\mangacatalog\target\classes started by drako in C:\Users\drako\Downloads\mangacatalog (1)\mangacatalog)
+2026-04-14 20:32:54 [main] DEBUG c.e.m.MangacatalogApplication - Running with Spring Boot v3.2.2, Spring v6.1.3
+2026-04-14 20:32:54 [main] INFO  c.e.m.MangacatalogApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-14 20:32:54 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-14 20:32:54 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 25 ms. Found 5 JPA repository interfaces.
+2026-04-14 20:32:54 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-14 20:32:54 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-04-14 20:32:54 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-14 20:32:54 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.18]
+2026-04-14 20:32:54 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-14 20:32:54 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 788 ms
+2026-04-14 20:32:54 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-14 20:32:55 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.4.1.Final
+2026-04-14 20:32:55 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-04-14 20:32:55 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-14 20:32:55 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-04-14 20:32:55 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@4809c771
+2026-04-14 20:32:55 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-04-14 20:32:55 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-04-14 20:32:55 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-14 20:32:55 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-14 20:32:56 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-14 20:32:56 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-14 20:32:56 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-04-14 20:32:56 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path ''
+2026-04-14 20:32:56 [main] INFO  c.e.m.MangacatalogApplication - Started MangacatalogApplication in 2.783 seconds (process running for 3.064)
+2026-04-14 21:46:34 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=44m38s812ms248µs500ns).
+2026-04-14 21:47:23 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-14 21:47:23 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-04-14 21:47:23 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2026-04-14 22:12:13 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.1.Final
+2026-04-14 22:12:13 [main] INFO  c.e.m.MangacatalogApplication - Starting MangacatalogApplication using Java 25.0.2 with PID 43600 (C:\Users\drako\Downloads\mangacatalog (1)\mangacatalog\target\classes started by drako in C:\Users\drako\Downloads\mangacatalog (1)\mangacatalog)
+2026-04-14 22:12:13 [main] DEBUG c.e.m.MangacatalogApplication - Running with Spring Boot v3.2.2, Spring v6.1.3
+2026-04-14 22:12:13 [main] INFO  c.e.m.MangacatalogApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-14 22:12:14 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-14 22:12:14 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 39 ms. Found 5 JPA repository interfaces.
+2026-04-14 22:12:14 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-14 22:12:14 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-04-14 22:12:14 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-14 22:12:14 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.18]
+2026-04-14 22:12:14 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-14 22:12:14 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1233 ms
+2026-04-14 22:12:14 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-14 22:12:14 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.4.1.Final
+2026-04-14 22:12:14 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-04-14 22:12:14 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-14 22:12:14 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-04-14 22:12:14 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@1a345298
+2026-04-14 22:12:14 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-04-14 22:12:14 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-04-14 22:12:15 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-14 22:12:15 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-14 22:12:15 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-14 22:12:16 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-14 22:12:16 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-04-14 22:12:16 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path ''
+2026-04-14 22:12:16 [main] INFO  c.e.m.MangacatalogApplication - Started MangacatalogApplication in 3.538 seconds (process running for 3.886)
+2026-04-14 22:13:10 [http-nio-8080-exec-5] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-14 22:13:10 [http-nio-8080-exec-5] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-14 22:13:10 [http-nio-8080-exec-5] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-14 22:13:11 [http-nio-8080-exec-7] INFO  o.s.api.AbstractOpenApiResource - Init duration for springdoc-openapi is: 296 ms
+2026-04-14 22:14:17 [http-nio-8080-exec-1] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. searchComplex()
+2026-04-14 22:14:17 [http-nio-8080-exec-1] INFO  c.e.m.service.ComicService - Кэш МИСС Комиксы. Запрос к БД (useNative=false)
+2026-04-14 22:14:17 [http-nio-8080-exec-1] WARN  org.hibernate.orm.query - HHH90003004: firstResult/maxResults specified with collection fetch; applying in memory
+2026-04-14 22:14:17 [http-nio-8080-exec-1] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.searchComplex() выполнен за 73 мс
+2026-04-14 22:38:14 [http-nio-8080-exec-6] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. getById()
+2026-04-14 22:38:14 [http-nio-8080-exec-6] INFO  c.e.m.service.ComicService - Кэш МИСС Комиксы. Запрос к БД для ID: 1
+2026-04-14 22:38:15 [http-nio-8080-exec-6] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.getById() выполнен за 14 мс
+2026-04-14 22:38:54 [http-nio-8080-exec-7] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. getById()
+2026-04-14 22:38:54 [http-nio-8080-exec-7] INFO  c.e.m.service.ComicService - ⚡ Кэш ХИТ Комиксы: ApiCacheKey{operation='getComicById', params=[1]}
+2026-04-14 22:38:54 [http-nio-8080-exec-7] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.getById() выполнен за 0 мс
+2026-04-14 22:39:23 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-14 22:39:23 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-04-14 22:39:23 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2026-04-14 22:39:25 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.1.Final
+2026-04-14 22:39:25 [main] INFO  c.e.m.MangacatalogApplication - Starting MangacatalogApplication using Java 25.0.2 with PID 25824 (C:\Users\drako\Downloads\mangacatalog (1)\mangacatalog\target\classes started by drako in C:\Users\drako\Downloads\mangacatalog (1)\mangacatalog)
+2026-04-14 22:39:25 [main] DEBUG c.e.m.MangacatalogApplication - Running with Spring Boot v3.2.2, Spring v6.1.3
+2026-04-14 22:39:25 [main] INFO  c.e.m.MangacatalogApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-14 22:39:26 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-14 22:39:26 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 33 ms. Found 5 JPA repository interfaces.
+2026-04-14 22:39:26 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-14 22:39:26 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-04-14 22:39:26 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-14 22:39:26 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.18]
+2026-04-14 22:39:26 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-14 22:39:26 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 800 ms
+2026-04-14 22:39:26 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-14 22:39:26 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.4.1.Final
+2026-04-14 22:39:26 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-04-14 22:39:26 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-14 22:39:27 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-04-14 22:39:27 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@78bad03b
+2026-04-14 22:39:27 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-04-14 22:39:27 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-04-14 22:39:27 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-14 22:39:27 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-14 22:39:27 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-14 22:39:28 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-14 22:39:28 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-04-14 22:39:28 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path ''
+2026-04-14 22:39:28 [main] INFO  c.e.m.MangacatalogApplication - Started MangacatalogApplication in 2.892 seconds (process running for 3.255)
+2026-04-14 22:39:57 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-14 22:39:57 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-04-14 22:39:57 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2026-04-14 22:39:59 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.1.Final
+2026-04-14 22:39:59 [main] INFO  c.e.m.MangacatalogApplication - Starting MangacatalogApplication using Java 25.0.2 with PID 17092 (C:\Users\drako\Downloads\mangacatalog (1)\mangacatalog\target\classes started by drako in C:\Users\drako\Downloads\mangacatalog (1)\mangacatalog)
+2026-04-14 22:39:59 [main] DEBUG c.e.m.MangacatalogApplication - Running with Spring Boot v3.2.2, Spring v6.1.3
+2026-04-14 22:39:59 [main] INFO  c.e.m.MangacatalogApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-14 22:40:00 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-14 22:40:00 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 27 ms. Found 5 JPA repository interfaces.
+2026-04-14 22:40:00 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-14 22:40:00 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-04-14 22:40:00 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-14 22:40:00 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.18]
+2026-04-14 22:40:00 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-14 22:40:00 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 745 ms
+2026-04-14 22:40:00 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-14 22:40:00 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.4.1.Final
+2026-04-14 22:40:00 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-04-14 22:40:00 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-14 22:40:00 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-04-14 22:40:00 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@252c6cdb
+2026-04-14 22:40:00 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-04-14 22:40:00 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-04-14 22:40:01 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-14 22:40:01 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-14 22:40:01 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-14 22:40:01 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-14 22:40:02 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-04-14 22:40:02 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path ''
+2026-04-14 22:40:02 [main] INFO  c.e.m.MangacatalogApplication - Started MangacatalogApplication in 2.838 seconds (process running for 3.139)
+2026-04-14 22:40:02 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-14 22:40:02 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-14 22:40:02 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-14 22:40:02 [http-nio-8080-exec-1] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. getById()
+2026-04-14 22:40:02 [http-nio-8080-exec-1] INFO  c.e.m.service.ComicService - Кэш МИСС Комиксы. Запрос к БД для ID: 1
+2026-04-14 22:40:02 [http-nio-8080-exec-1] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.getById() выполнен за 46 мс
+2026-04-14 22:40:03 [http-nio-8080-exec-6] DEBUG c.e.mangacatalog.aop.LoggingAspect - AOР: Начало выполнения метода ComicService. getById()
+2026-04-14 22:40:03 [http-nio-8080-exec-6] INFO  c.e.m.service.ComicService - Кэш ХИТ Комиксы: ApiCacheKey{operation='getComicById', params=[1]}
+2026-04-14 22:40:03 [http-nio-8080-exec-6] INFO  c.e.mangacatalog.aop.LoggingAspect - AOP: Метод ComicService.getById() выполнен за 0 мс
+2026-04-14 23:23:24 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-14 23:23:24 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-04-14 23:23:24 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.

@@ -7,7 +7,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class AuthorMapper {
     public AuthorDto toDto(Author entity) {
-        if (entity == null) return null;
+        if (entity == null) {
+            return null;
+        }
         return new AuthorDto(entity.getId(), entity.getName());
     }
 }
