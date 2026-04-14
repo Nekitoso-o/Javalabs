@@ -41,7 +41,7 @@ public class Comic {
 
 
     public Comic() {
-
+        super();
     }
 
 

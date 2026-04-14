@@ -19,7 +19,7 @@ public class Genre {
     private List<Comic> comics = new ArrayList<>();
 
     public Genre() {
-
+        super();
     }
 
     public Long getId() {

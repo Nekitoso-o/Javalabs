@@ -19,7 +19,7 @@ public class Author {
     private List<Comic> comics = new ArrayList<>();
 
     public Author() {
-
+        super();
     }
 
     public Long getId() {
