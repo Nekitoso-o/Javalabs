@@ -22,6 +22,10 @@ public class AuthorService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AuthorService.class);
 
+    private static final String AUTHOR_NOT_FOUND_MSG = "Автор с ID %s не найден!";
+    private static final String CACHE_HIT_MSG = "Кэш ХИТ Авторы: {}";
+    private static final String CACHE_MISS_MSG = "Кэш МИСС Авторы. Запрос к БД";
+
     private final AuthorRepository repository;
     private final AuthorMapper mapper;
     private final Map<ApiCacheKey, Object> cache = new ConcurrentHashMap<>();
@@ -40,10 +44,10 @@ public class AuthorService {
     public List<AuthorDto> getAll() {
         ApiCacheKey key = new ApiCacheKey("getAllAuthors");
         if (cache.containsKey(key)) {
-            LOG.info("Кэш ХИТ Авторы: {}", key);
+            LOG.info(CACHE_HIT_MSG, key);
             return (List<AuthorDto>) cache.get(key);
         }
-        LOG.info("Кэш МИСС Авторы. Запрос к БД");
+        LOG.info(CACHE_MISS_MSG);
         List<AuthorDto> result = repository.findAll().stream().map(mapper::toDto).toList();
         cache.put(key, result);
         return result;
@@ -52,12 +56,12 @@ public class AuthorService {
     public AuthorDto getById(Long id) {
         ApiCacheKey key = new ApiCacheKey("getAuthorById", id);
         if (cache.containsKey(key)) {
-            LOG.info("Кэш ХИТ Авторы: {}", key);
+            LOG.info(CACHE_HIT_MSG, key);
             return (AuthorDto) cache.get(key);
         }
         LOG.info("Кэш МИСС Авторы. Запрос к БД для ID: {}", id);
         Author author = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Автор с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(AUTHOR_NOT_FOUND_MSG, id)));
         AuthorDto result = mapper.toDto(author);
         cache.put(key, result);
         return result;
@@ -75,7 +79,7 @@ public class AuthorService {
     @Transactional
     public AuthorDto update(Long id, AuthorRequest request) {
         Author existing = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Автор с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(AUTHOR_NOT_FOUND_MSG, id)));
         existing.setName(request.name());
         AuthorDto result = mapper.toDto(repository.save(existing));
         invalidateCache();
@@ -85,7 +89,7 @@ public class AuthorService {
     @Transactional
     public void delete(Long id) {
         Author author = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Автор с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(AUTHOR_NOT_FOUND_MSG, id)));
         if (author.getComics() != null) {
             for (Comic comic : author.getComics()) {
                 comic.setAuthor(null);

@@ -30,6 +30,15 @@ import java.util.stream.Collectors;
 public class ComicService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ComicService.class);
+
+    private static final String COMIC_NOT_FOUND_MSG = "Комикс с ID %s не найден!";
+    private static final String AUTHOR_NOT_FOUND_MSG = "Автор с ID %s не найден!";
+    private static final String PUBLISHER_NOT_FOUND_MSG = "Издатель с ID %s не найден!";
+    private static final String GENRE_NOT_FOUND_MSG = "Жанр с ID %s не найден!";
+
+    private static final String CACHE_HIT_MSG = "Кэш ХИТ Комиксы: {}";
+    private static final String CACHE_MISS_MSG = "Кэш МИСС Комиксы. Запрос к БД";
+
     private final ComicRepository comicRepository;
     private final PublisherRepository publisherRepository;
     private final AuthorRepository authorRepository;
@@ -57,10 +66,10 @@ public class ComicService {
     public List<ComicDto> getAll() {
         ApiCacheKey key = new ApiCacheKey("getAllComics");
         if (cache.containsKey(key)) {
-            LOG.info("Кэш ХИТ Комиксы: {}", key);
+            LOG.info(CACHE_HIT_MSG, key);
             return (List<ComicDto>) cache.get(key);
         }
-        LOG.info("Кэш МИСС Комиксы. Запрос к БД");
+        LOG.info(CACHE_MISS_MSG);
         List<ComicDto> result = comicRepository.findAll().stream().map(comicMapper::toDto).toList();
         cache.put(key, result);
         return result;
@@ -69,12 +78,12 @@ public class ComicService {
     public ComicDto getById(Long id) {
         ApiCacheKey key = new ApiCacheKey("getComicById", id);
         if (cache.containsKey(key)) {
-            LOG.info("Кэш ХИТ Комиксы: {}", key);
+            LOG.info(CACHE_HIT_MSG, key);
             return (ComicDto) cache.get(key);
         }
         LOG.info("Кэш МИСС Комиксы. Запрос к БД для ID: {}", id);
         Comic comic = comicRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Комикс с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, id)));
         ComicDto result = comicMapper.toDto(comic);
         cache.put(key, result);
         return result;
@@ -84,10 +93,10 @@ public class ComicService {
     public List<ComicDto> searchByTitle(String title) {
         ApiCacheKey key = new ApiCacheKey("searchByTitle", title);
         if (cache.containsKey(key)) {
-            LOG.info("Кэш ХИТ Комиксы: {}", key);
+            LOG.info(CACHE_HIT_MSG, key);
             return (List<ComicDto>) cache.get(key);
         }
-        LOG.info("Кэш МИСС Комиксы. Запрос к БД");
+        LOG.info(CACHE_MISS_MSG);
         List<ComicDto> result = comicRepository.findByTitleContainingIgnoreCase(title)
             .stream().map(comicMapper::toDto).toList();
         cache.put(key, result);
@@ -98,10 +107,10 @@ public class ComicService {
     public List<ComicDto> getComicsByAuthor(Long authorId) {
         ApiCacheKey key = new ApiCacheKey("getComicsByAuthor", authorId);
         if (cache.containsKey(key)) {
-            LOG.info("Кэш ХИТ Комиксы: {}", key);
+            LOG.info(CACHE_HIT_MSG, key);
             return (List<ComicDto>) cache.get(key);
         }
-        LOG.info("Кэш МИСС Комиксы. Запрос к БД");
+        LOG.info(CACHE_MISS_MSG);
         List<ComicDto> result = comicRepository.findByAuthorId(authorId)
             .stream().map(comicMapper::toDto).toList();
         cache.put(key, result);
@@ -117,7 +126,7 @@ public class ComicService {
             return (List<ComicDto>) cache.get(key);
         }
 
-        LOG.info("Кэш МИСС Комиксы. Запрос к БД (useNative={})", useNative);
+        LOG.info("Кэш МИСС Комиксы. Запрос к БД (useNative={})", useNative ? "true" : "false");
         Pageable pageable = PageRequest.of(page, size);
         List<ComicDto> dtoList;
         if (useNative) {
@@ -157,17 +166,17 @@ public class ComicService {
         comic.setReleaseYear(request.releaseYear());
 
         Author author = authorRepository.findById(request.authorId())
-            .orElseThrow(() -> new ResourceNotFoundException("Автор с ID " + request.authorId() + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(AUTHOR_NOT_FOUND_MSG, request.authorId())));
         comic.setAuthor(author);
 
         Publisher publisher = publisherRepository.findById(request.publisherId())
-            .orElseThrow(() -> new ResourceNotFoundException("Издатель с ID " + request.publisherId() + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(PUBLISHER_NOT_FOUND_MSG, request.publisherId())));
         comic.setPublisher(publisher);
 
         if (request.genreIds() != null && !request.genreIds().isEmpty()) {
             Set<Genre> genres = request.genreIds().stream()
                 .map(id -> genreRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Жанр с ID " + id + " не найден!")))
+                    .orElseThrow(() -> new ResourceNotFoundException(String.format(GENRE_NOT_FOUND_MSG, id))))
                 .collect(Collectors.toSet());
             comic.setGenres(genres);
         }
@@ -180,22 +189,22 @@ public class ComicService {
     @Transactional
     public ComicDto update(Long id, ComicRequest request) {
         Comic existing = comicRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Комикс с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, id)));
         existing.setTitle(request.title());
         existing.setReleaseYear(request.releaseYear());
 
         Author author = authorRepository.findById(request.authorId())
-            .orElseThrow(() -> new ResourceNotFoundException("Автор с ID " + request.authorId() + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(AUTHOR_NOT_FOUND_MSG, request.authorId())));
         existing.setAuthor(author);
 
         Publisher publisher = publisherRepository.findById(request.publisherId())
-            .orElseThrow(() -> new ResourceNotFoundException("Издатель с ID " + request.publisherId() + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(PUBLISHER_NOT_FOUND_MSG, request.publisherId())));
         existing.setPublisher(publisher);
 
         if (request.genreIds() != null) {
             Set<Genre> genres = request.genreIds().stream()
                 .map(gId -> genreRepository.findById(gId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Жанр с ID " + gId + " не найден!")))
+                    .orElseThrow(() -> new ResourceNotFoundException(String.format(GENRE_NOT_FOUND_MSG, gId))))
                 .collect(Collectors.toSet());
             existing.setGenres(genres);
         }
@@ -208,17 +217,16 @@ public class ComicService {
     @Transactional
     public void delete(Long id) {
         if (!comicRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Комикс с ID " + id + " не найден!");
+            throw new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, id));
         }
         comicRepository.deleteById(id);
         invalidateCache();
     }
 
-
     @Transactional
     public ComicDto patch(Long id, ComicPatchRequest request) {
         Comic existing = comicRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Комикс с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, id)));
 
         if (request.title() != null) {
             existing.setTitle(request.title());
@@ -230,21 +238,20 @@ public class ComicService {
 
         if (request.authorId() != null) {
             Author author = authorRepository.findById(request.authorId())
-                .orElseThrow(() -> new ResourceNotFoundException("Автор с ID " + request.authorId() + " не найден!"));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(AUTHOR_NOT_FOUND_MSG, request.authorId())));
             existing.setAuthor(author);
         }
 
         if (request.publisherId() != null) {
             Publisher publisher = publisherRepository.findById(request.publisherId())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException("Издатель с ID " + request.publisherId() + " не найден!"));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(PUBLISHER_NOT_FOUND_MSG, request.publisherId())));
             existing.setPublisher(publisher);
         }
 
         if (request.genreIds() != null) {
             Set<Genre> genres = request.genreIds().stream()
                 .map(gId -> genreRepository.findById(gId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Жанр с ID " + gId + " не найден!")))
+                    .orElseThrow(() -> new ResourceNotFoundException(String.format(GENRE_NOT_FOUND_MSG, gId))))
                 .collect(Collectors.toSet());
             existing.setGenres(genres);
         }

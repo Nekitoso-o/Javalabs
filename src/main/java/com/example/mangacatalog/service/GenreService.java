@@ -22,6 +22,10 @@ public class GenreService {
 
     private static final Logger LOG = LoggerFactory.getLogger(GenreService.class);
 
+    private static final String GENRE_NOT_FOUND_MSG = "Жанр с ID %s не найден!";
+    private static final String CACHE_HIT_MSG = "Кэш ХИТ Жанры: {}";
+    private static final String CACHE_MISS_MSG = "Кэш МИСС Жанры. Запрос к БД";
+
     private final GenreRepository repository;
     private final GenreMapper mapper;
     private final Map<ApiCacheKey, Object> cache = new ConcurrentHashMap<>();
@@ -40,10 +44,10 @@ public class GenreService {
     public List<GenreDto> getAll() {
         ApiCacheKey key = new ApiCacheKey("getAllGenres");
         if (cache.containsKey(key)) {
-            LOG.info(" Кэш ХИТ Жанры: {}", key);
+            LOG.info(CACHE_HIT_MSG, key);
             return (List<GenreDto>) cache.get(key);
         }
-        LOG.info(" Кэш МИСС Жанры. Запрос к БД");
+        LOG.info(CACHE_MISS_MSG);
         List<GenreDto> result = repository.findAll().stream().map(mapper::toDto).toList();
         cache.put(key, result);
         return result;
@@ -52,12 +56,12 @@ public class GenreService {
     public GenreDto getById(Long id) {
         ApiCacheKey key = new ApiCacheKey("getGenreById", id);
         if (cache.containsKey(key)) {
-            LOG.info(" Кэш ХИТ Жанры: {}", key);
+            LOG.info(CACHE_HIT_MSG, key);
             return (GenreDto) cache.get(key);
         }
-        LOG.info(" Кэш МИСС Жанры. Запрос к БД для ID: {}", id);
+        LOG.info("Кэш МИСС Жанры. Запрос к БД для ID: {}", id);
         Genre genre = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Жанр с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(GENRE_NOT_FOUND_MSG, id)));
         GenreDto result = mapper.toDto(genre);
         cache.put(key, result);
         return result;
@@ -75,7 +79,7 @@ public class GenreService {
     @Transactional
     public GenreDto update(Long id, GenreRequest request) {
         Genre existing = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Жанр с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(GENRE_NOT_FOUND_MSG, id)));
         existing.setName(request.name());
         GenreDto result = mapper.toDto(repository.save(existing));
         invalidateCache();
@@ -85,7 +89,7 @@ public class GenreService {
     @Transactional
     public void delete(Long id) {
         Genre genre = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Жанр с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(GENRE_NOT_FOUND_MSG, id)));
         if (genre.getComics() != null) {
             for (Comic comic : genre.getComics()) {
                 comic.getGenres().remove(genre);

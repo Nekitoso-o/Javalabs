@@ -22,6 +22,10 @@ public class PublisherService {
 
     private static final Logger LOG = LoggerFactory.getLogger(PublisherService.class);
 
+    private static final String PUBLISHER_NOT_FOUND_MSG = "Издатель с ID %s не найден!";
+    private static final String CACHE_HIT_MSG = "Кэш ХИТ Издатели: {}";
+    private static final String CACHE_MISS_MSG = "Кэш МИСС Издатели. Запрос к БД";
+
     private final PublisherRepository repository;
     private final PublisherMapper mapper;
     private final Map<ApiCacheKey, Object> cache = new ConcurrentHashMap<>();
@@ -40,10 +44,10 @@ public class PublisherService {
     public List<PublisherDto> getAll() {
         ApiCacheKey key = new ApiCacheKey("getAllPublishers");
         if (cache.containsKey(key)) {
-            LOG.info(" Кэш ХИТ Издатели: {}", key);
+            LOG.info(CACHE_HIT_MSG, key);
             return (List<PublisherDto>) cache.get(key);
         }
-        LOG.info(" Кэш МИСС Издатели. Запрос к БД");
+        LOG.info(CACHE_MISS_MSG);
         List<PublisherDto> result = repository.findAll().stream().map(mapper::toDto).toList();
         cache.put(key, result);
         return result;
@@ -52,12 +56,12 @@ public class PublisherService {
     public PublisherDto getById(Long id) {
         ApiCacheKey key = new ApiCacheKey("getPublisherById", id);
         if (cache.containsKey(key)) {
-            LOG.info(" Кэш ХИТ Издатели: {}", key);
+            LOG.info(CACHE_HIT_MSG, key);
             return (PublisherDto) cache.get(key);
         }
-        LOG.info(" Кэш МИСС Издатели. Запрос к БД для ID: {}", id);
+        LOG.info("Кэш МИСС Издатели. Запрос к БД для ID: {}", id);
         Publisher publisher = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Издатель с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(PUBLISHER_NOT_FOUND_MSG, id)));
         PublisherDto result = mapper.toDto(publisher);
         cache.put(key, result);
         return result;
@@ -75,7 +79,7 @@ public class PublisherService {
     @Transactional
     public PublisherDto update(Long id, PublisherRequest request) {
         Publisher existing = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Издатель с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(PUBLISHER_NOT_FOUND_MSG, id)));
         existing.setName(request.name());
         PublisherDto result = mapper.toDto(repository.save(existing));
         invalidateCache();
@@ -85,7 +89,7 @@ public class PublisherService {
     @Transactional
     public void delete(Long id) {
         Publisher publisher = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Издатель с ID " + id + " не найден!"));
+            .orElseThrow(() -> new ResourceNotFoundException(String.format(PUBLISHER_NOT_FOUND_MSG, id)));
 
         if (publisher.getComics() != null) {
             for (Comic comic : publisher.getComics()) {
