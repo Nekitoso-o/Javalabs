@@ -1,5 +1,4 @@
 package com.example.mangacatalog.controller;
-import com.example.mangacatalog.dto.TransactionDemoDto;
 import com.example.mangacatalog.dto.ComicDto;
 import com.example.mangacatalog.dto.ComicRequest;
 import com.example.mangacatalog.dto.ComicPatchRequest;
@@ -79,25 +78,9 @@ public class ComicController {
 
 
 
-    @PostMapping("/demo/no-transaction")
-    public String testNoTransaction(@RequestBody TransactionDemoDto dto) {
-        try {
-            comicService.saveDataWithoutTransaction(dto);
-        } catch (Exception e) {
-            return "Ошибка: " + e.getMessage() + " | Проверьте БД - Издатель БЫЛ сохранен!";
-        }
-        return "Успех! Издатель и комикс сохранены.";
-    }
 
-    @PostMapping("/demo/with-transaction")
-    public String testWithTransaction(@RequestBody TransactionDemoDto dto) {
-        try {
-            comicService.saveDataWithTransaction(dto);
-        } catch (Exception e) {
-            return "Ошибка: " + e.getMessage() + " | Проверьте БД - Издатель НЕ сохранен (Rollback).";
-        }
-        return "Успех! Издатель и комикс сохранены.";
-    }
+
+
     @PatchMapping("/{id}")
     @Operation(summary = "Частично обновить данные комикса")
     public ComicDto patch(@PathVariable("id") Long id, @Valid @RequestBody ComicPatchRequest request) {

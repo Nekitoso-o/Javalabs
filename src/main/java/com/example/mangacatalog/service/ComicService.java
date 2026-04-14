@@ -214,41 +214,6 @@ public class ComicService {
         invalidateCache();
     }
 
-    public void saveDataWithoutTransaction(TransactionDemoDto dto) {
-        Publisher pub = new Publisher();
-        pub.setName(dto.getPublisherName());
-        publisherRepository.save(pub);
-
-        Comic comic = new Comic();
-        comic.setTitle(dto.getComicTitle());
-        comic.setPublisher(pub);
-
-        if (dto.isThrowError()) {
-            throw new IllegalStateException("Внезапная ошибка БЕЗ транзакции!");
-        }
-
-        comicRepository.save(comic);
-        invalidateCache();
-    }
-
-    @Transactional
-    public void saveDataWithTransaction(TransactionDemoDto dto) {
-        Publisher pub = new Publisher();
-        pub.setName(dto.getPublisherName());
-        publisherRepository.save(pub);
-
-        Comic comic = new Comic();
-        comic.setTitle(dto.getComicTitle());
-        comic.setPublisher(pub);
-
-        if (dto.isThrowError()) {
-            throw new IllegalStateException("Внезапная ошибка С транзакцией! Всё будет откатано.");
-        }
-
-        comicRepository.save(comic);
-        invalidateCache();
-    }
-
 
     @Transactional
     public ComicDto patch(Long id, ComicPatchRequest request) {
