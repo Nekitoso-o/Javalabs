@@ -76,11 +76,6 @@ public class ComicController {
         return "Комикс успешно удален";
     }
 
-
-
-
-
-
     @PatchMapping("/{id}")
     @Operation(summary = "Частично обновить данные комикса")
     public ComicDto patch(@PathVariable("id") Long id, @Valid @RequestBody ComicPatchRequest request) {
