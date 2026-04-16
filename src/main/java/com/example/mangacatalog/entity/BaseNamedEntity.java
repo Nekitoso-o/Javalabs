@@ -14,7 +14,7 @@ public abstract class BaseNamedEntity {
 
     private String name;
 
-    public BaseNamedEntity() {
+    protected BaseNamedEntity() {
     }
 
     public Long getId() {
