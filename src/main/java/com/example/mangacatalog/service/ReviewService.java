@@ -1,6 +1,7 @@
 package com.example.mangacatalog.service;
 
 import com.example.mangacatalog.cache.ApiCacheKey;
+import com.example.mangacatalog.cache.ApiCacheManager;
 import com.example.mangacatalog.dto.ReviewDto;
 import com.example.mangacatalog.dto.ReviewPatchRequest;
 import com.example.mangacatalog.dto.ReviewRequest;
@@ -16,73 +17,67 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ReviewService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ReviewService.class);
-
     private static final String REVIEW_NOT_FOUND_MSG = "Отзыв с ID %s не найден!";
     private static final String COMIC_NOT_FOUND_MSG = "Комикс с ID %s не найден!";
-    private static final String CACHE_HIT_MSG = "Кэш ХИТ Отзывы: {}";
-    private static final String CACHE_MISS_MSG = "Кэш МИСС Отзывы. Запрос к БД";
 
     private final ReviewRepository reviewRepository;
     private final ComicRepository comicRepository;
     private final ReviewMapper reviewMapper;
-    private final Map<ApiCacheKey, Object> cache = new ConcurrentHashMap<>();
+    private final ApiCacheManager cacheManager;
 
     public ReviewService(ReviewRepository reviewRepository,
-                         ComicRepository comicRepository, ReviewMapper reviewMapper) {
+                         ComicRepository comicRepository,
+                         ReviewMapper reviewMapper,
+                         ApiCacheManager cacheManager) {
         this.reviewRepository = reviewRepository;
         this.comicRepository = comicRepository;
         this.reviewMapper = reviewMapper;
-    }
-
-    private void invalidateCache() {
-        LOG.info("Инвалидация: Очистка In-Memory кеша Отзывов.");
-        cache.clear();
+        this.cacheManager = cacheManager;
     }
 
     @SuppressWarnings("unchecked")
     public List<ReviewDto> getAllReviews() {
         ApiCacheKey key = new ApiCacheKey("getAllReviews");
-        if (cache.containsKey(key)) {
-            LOG.info(CACHE_HIT_MSG, key);
-            return (List<ReviewDto>) cache.get(key);
-        }
-        LOG.info(CACHE_MISS_MSG);
+
+        Object cached = cacheManager.get(key);
+        if (cached != null) return (List<ReviewDto>) cached;
+
         List<ReviewDto> result = reviewRepository.findAll().stream().map(reviewMapper::toDto).toList();
-        cache.put(key, result);
+        cacheManager.put(key, result);
         return result;
     }
 
     public ReviewDto getById(Long id) {
         ApiCacheKey key = new ApiCacheKey("getReviewById", id);
-        if (cache.containsKey(key)) {
-            LOG.info(CACHE_HIT_MSG, key);
-            return (ReviewDto) cache.get(key);
-        }
-        LOG.info("Кэш МИСС Отзывы. Запрос к БД для ID: {}", id);
+
+        Object cached = cacheManager.get(key);
+        if (cached != null) return (ReviewDto) cached;
+
+        LOG.info("Запрос к БД для ID: {}", id);
         Review review = reviewRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(String.format(REVIEW_NOT_FOUND_MSG, id)));
+
         ReviewDto result = reviewMapper.toDto(review);
-        cache.put(key, result);
+        cacheManager.put(key, result);
         return result;
     }
 
     @SuppressWarnings("unchecked")
     public List<ReviewDto> getReviewsByComicId(Long comicId) {
         ApiCacheKey key = new ApiCacheKey("getReviewsByComicId", comicId);
-        if (cache.containsKey(key)) {
-            LOG.info(CACHE_HIT_MSG, key);
-            return (List<ReviewDto>) cache.get(key);
-        }
-        LOG.info("Кэш МИСС Отзывы. Запрос к БД для Comic ID: {}", comicId);
+
+        Object cached = cacheManager.get(key);
+        if (cached != null) return (List<ReviewDto>) cached;
+
+        LOG.info("Запрос к БД для Comic ID: {}", comicId);
         List<ReviewDto> result = reviewRepository.findByComicId(comicId).stream().map(reviewMapper::toDto).toList();
-        cache.put(key, result);
+
+        cacheManager.put(key, result);
         return result;
     }
 
@@ -90,13 +85,14 @@ public class ReviewService {
     public ReviewDto addReviewToComic(ReviewRequest request) {
         Comic comic = comicRepository.findById(request.comicId())
             .orElseThrow(() -> new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, request.comicId())));
+
         Review review = new Review();
         review.setText(request.text());
         review.setRating(request.rating());
         review.setComic(comic);
 
         ReviewDto result = reviewMapper.toDto(reviewRepository.save(review));
-        invalidateCache();
+        cacheManager.invalidate();
         return result;
     }
 
@@ -104,11 +100,12 @@ public class ReviewService {
     public ReviewDto update(Long id, ReviewRequest request) {
         Review existing = reviewRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(String.format(REVIEW_NOT_FOUND_MSG, id)));
+
         existing.setText(request.text());
         existing.setRating(request.rating());
 
         ReviewDto result = reviewMapper.toDto(reviewRepository.save(existing));
-        invalidateCache();
+        cacheManager.invalidate();
         return result;
     }
 
@@ -118,7 +115,7 @@ public class ReviewService {
             throw new ResourceNotFoundException(String.format(REVIEW_NOT_FOUND_MSG, id));
         }
         reviewRepository.deleteById(id);
-        invalidateCache();
+        cacheManager.invalidate();
     }
 
     @Transactional
@@ -129,11 +126,9 @@ public class ReviewService {
         if (request.text() != null) {
             existing.setText(request.text());
         }
-
         if (request.rating() != null) {
             existing.setRating(request.rating());
         }
-
         if (request.comicId() != null) {
             Comic comic = comicRepository.findById(request.comicId())
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, request.comicId())));
@@ -141,7 +136,7 @@ public class ReviewService {
         }
 
         ReviewDto result = reviewMapper.toDto(reviewRepository.save(existing));
-        invalidateCache();
+        cacheManager.invalidate();
         return result;
     }
 }

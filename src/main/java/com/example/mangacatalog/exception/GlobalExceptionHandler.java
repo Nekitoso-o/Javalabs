@@ -5,7 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -18,14 +18,12 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-
     private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-
+    // 404: Ресурс не найден (ваша кастомная ошибка)
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(final ResourceNotFoundException ex) {
+    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
         LOG.warn("Ресурс не найден: {}", ex.getMessage());
-
         ErrorResponse body = new ErrorResponse(
             HttpStatus.NOT_FOUND.value(),
             ex.getMessage(),
@@ -36,14 +34,37 @@ public class GlobalExceptionHandler {
     }
 
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(final MethodArgumentNotValidException ex) {
-        LOG.warn("Ошибка валидации данных");
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleJsonError(final HttpMessageNotReadableException ex) {
+        LOG.warn("Ошибка чтения JSON или неверный формат данных: {}", ex.getMessage());
+        ErrorResponse body = new ErrorResponse(
+            HttpStatus.BAD_REQUEST.value(),
+            "Ошибка в формате JSON-запроса. Проверьте правильность заполнения полей и синтаксис.",
+            LocalDateTime.now(),
+            null
+        );
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+    // 404: Эндпоинт не существует
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex) {
+        LOG.warn("Запрошен несуществующий путь: {}", ex.getResourcePath());
+        ErrorResponse body = new ErrorResponse(
+            HttpStatus.NOT_FOUND.value(),
+            "Эндпоинт или файл не найден: " + ex.getResourcePath(),
+            LocalDateTime.now(),
+            null
+        );
+        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    }
 
+    // 400: Ошибка валидации тела запроса (@RequestBody)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
+        LOG.warn("Ошибка валидации данных @RequestBody");
         Map<String, String> errors = new HashMap<>();
-        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-            errors.put(error.getField(), error.getDefaultMessage());
-        }
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+            errors.put(error.getField(), error.getDefaultMessage()));
 
         ErrorResponse body = new ErrorResponse(
             HttpStatus.BAD_REQUEST.value(),
@@ -54,26 +75,27 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNoResourceFound(final NoResourceFoundException ex) {
-        LOG.warn("Запрошен несуществующий путь: {}", ex.getResourcePath());
-
+    // 400: Некорректные аргументы (ЭТОТ БЛОК РЕШАЕТ ВАШУ ПРОБЛЕМУ)
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        LOG.warn("Недопустимый аргумент: {}", ex.getMessage());
         ErrorResponse body = new ErrorResponse(
-            HttpStatus.NOT_FOUND.value(),
-            "Эндпоинт или файл не найден: " + ex.getResourcePath(),
+            HttpStatus.BAD_REQUEST.value(),
+            "Некорректный запрос: " + ex.getMessage(), // Сообщение "ID must not be null" будет здесь
             LocalDateTime.now(),
             null
         );
-        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
+    // 500: Все остальные непредвиденные ошибки
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(final Exception ex) {
-        LOG.error("Критическая ошибка сервера: ", ex);
-
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        LOG.error("Критическая ошибка сервера: ", ex); // Логируем полный стектрейс для отладки
         ErrorResponse body = new ErrorResponse(
             HttpStatus.INTERNAL_SERVER_ERROR.value(),
-            "Внутренняя ошибка сервера: " + ex.getMessage(),
+            // НЕ отправляем ex.getMessage() клиенту!
+            "Произошла внутренняя ошибка сервера. Пожалуйста, попробуйте позже.",
             LocalDateTime.now(),
             null
         );

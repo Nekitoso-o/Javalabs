@@ -1,6 +1,7 @@
 package com.example.mangacatalog.service;
 
 import com.example.mangacatalog.cache.ApiCacheKey;
+import com.example.mangacatalog.cache.ApiCacheManager;
 import com.example.mangacatalog.dto.AuthorDto;
 import com.example.mangacatalog.dto.AuthorRequest;
 import com.example.mangacatalog.exception.ResourceNotFoundException;
@@ -14,56 +15,56 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AuthorService {
-
     private static final Logger LOG = LoggerFactory.getLogger(AuthorService.class);
-
     private static final String AUTHOR_NOT_FOUND_MSG = "Автор с ID %s не найден!";
-    private static final String CACHE_HIT_MSG = "Кэш ХИТ Авторы: {}";
-    private static final String CACHE_MISS_MSG = "Кэш МИСС Авторы. Запрос к БД";
 
     private final AuthorRepository repository;
     private final AuthorMapper mapper;
-    private final Map<ApiCacheKey, Object> cache = new ConcurrentHashMap<>();
 
-    public AuthorService(AuthorRepository repository, AuthorMapper mapper) {
+    // Внедряем наш новый CacheManager вместо ConcurrentHashMap
+    private final ApiCacheManager cacheManager;
+
+    public AuthorService(AuthorRepository repository, AuthorMapper mapper, ApiCacheManager cacheManager) {
         this.repository = repository;
         this.mapper = mapper;
-    }
-
-    private void invalidateCache() {
-        LOG.info("Инвалидация: Очистка In-Memory кеша Авторов.");
-        cache.clear();
+        this.cacheManager = cacheManager;
     }
 
     @SuppressWarnings("unchecked")
     public List<AuthorDto> getAll() {
         ApiCacheKey key = new ApiCacheKey("getAllAuthors");
-        if (cache.containsKey(key)) {
-            LOG.info(CACHE_HIT_MSG, key);
-            return (List<AuthorDto>) cache.get(key);
+
+        // Пытаемся получить из кэша. Логирование HIT/MISS теперь внутри cacheManager
+        Object cachedResult = cacheManager.get(key);
+        if (cachedResult != null) {
+            return (List<AuthorDto>) cachedResult;
         }
-        LOG.info(CACHE_MISS_MSG);
+
+        LOG.info("Запрос к БД для получения всех авторов");
         List<AuthorDto> result = repository.findAll().stream().map(mapper::toDto).toList();
-        cache.put(key, result);
+
+        // Кладем в кэш
+        cacheManager.put(key, result);
         return result;
     }
 
     public AuthorDto getById(Long id) {
         ApiCacheKey key = new ApiCacheKey("getAuthorById", id);
-        if (cache.containsKey(key)) {
-            LOG.info(CACHE_HIT_MSG, key);
-            return (AuthorDto) cache.get(key);
+
+        Object cachedResult = cacheManager.get(key);
+        if (cachedResult != null) {
+            return (AuthorDto) cachedResult;
         }
-        LOG.info("Кэш МИСС Авторы. Запрос к БД для ID: {}", id);
+
+        LOG.info("Запрос к БД для ID: {}", id);
         Author author = repository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(String.format(AUTHOR_NOT_FOUND_MSG, id)));
+
         AuthorDto result = mapper.toDto(author);
-        cache.put(key, result);
+        cacheManager.put(key, result);
         return result;
     }
 
@@ -72,7 +73,9 @@ public class AuthorService {
         Author entity = new Author();
         entity.setName(request.name());
         AuthorDto result = mapper.toDto(repository.save(entity));
-        invalidateCache();
+
+        // Инвалидируем кэш
+        cacheManager.invalidate();
         return result;
     }
 
@@ -82,7 +85,8 @@ public class AuthorService {
             .orElseThrow(() -> new ResourceNotFoundException(String.format(AUTHOR_NOT_FOUND_MSG, id)));
         existing.setName(request.name());
         AuthorDto result = mapper.toDto(repository.save(existing));
-        invalidateCache();
+
+        cacheManager.invalidate();
         return result;
     }
 
@@ -96,6 +100,7 @@ public class AuthorService {
             }
         }
         repository.delete(author);
-        invalidateCache();
+
+        cacheManager.invalidate();
     }
 }

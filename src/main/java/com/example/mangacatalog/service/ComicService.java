@@ -1,6 +1,7 @@
 package com.example.mangacatalog.service;
 
 import com.example.mangacatalog.cache.ApiCacheKey;
+import com.example.mangacatalog.cache.ApiCacheManager;
 import com.example.mangacatalog.dto.*;
 import com.example.mangacatalog.exception.ResourceNotFoundException;
 import com.example.mangacatalog.entity.Author;
@@ -21,99 +22,88 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
 public class ComicService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ComicService.class);
-
     private static final String COMIC_NOT_FOUND_MSG = "Комикс с ID %s не найден!";
     private static final String AUTHOR_NOT_FOUND_MSG = "Автор с ID %s не найден!";
     private static final String PUBLISHER_NOT_FOUND_MSG = "Издатель с ID %s не найден!";
-    private static final String GENRE_NOT_FOUND_MSG = "Жанр с ID %s не найден!";
-
-    private static final String CACHE_HIT_MSG = "Кэш ХИТ Комиксы: {}";
-    private static final String CACHE_MISS_MSG = "Кэш МИСС Комиксы. Запрос к БД";
+    private static final String GENRE_NOT_FOUND_MSG = "Жанр c ID %s не найден!";
 
     private final ComicRepository comicRepository;
     private final PublisherRepository publisherRepository;
     private final AuthorRepository authorRepository;
     private final GenreRepository genreRepository;
     private final ComicMapper comicMapper;
-    private final Map<ApiCacheKey, Object> cache = new ConcurrentHashMap<>();
+    private final ApiCacheManager cacheManager;
 
     public ComicService(ComicRepository comicRepository,
                         PublisherRepository publisherRepository,
                         AuthorRepository authorRepository,
-                        GenreRepository genreRepository, ComicMapper comicMapper) {
+                        GenreRepository genreRepository,
+                        ComicMapper comicMapper,
+                        ApiCacheManager cacheManager) {
         this.comicRepository = comicRepository;
         this.publisherRepository = publisherRepository;
         this.authorRepository = authorRepository;
         this.genreRepository = genreRepository;
         this.comicMapper = comicMapper;
-    }
-
-    private void invalidateCache() {
-        LOG.info("Инвалидация: Очистка In-Memory кеша Комиксов.");
-        cache.clear();
+        this.cacheManager = cacheManager;
     }
 
     @SuppressWarnings("unchecked")
     public List<ComicDto> getAll() {
         ApiCacheKey key = new ApiCacheKey("getAllComics");
-        if (cache.containsKey(key)) {
-            LOG.info(CACHE_HIT_MSG, key);
-            return (List<ComicDto>) cache.get(key);
-        }
-        LOG.info(CACHE_MISS_MSG);
+
+        Object cached = cacheManager.get(key);
+        if (cached != null) return (List<ComicDto>) cached;
+
         List<ComicDto> result = comicRepository.findAll().stream().map(comicMapper::toDto).toList();
-        cache.put(key, result);
+        cacheManager.put(key, result);
         return result;
     }
 
     public ComicDto getById(Long id) {
         ApiCacheKey key = new ApiCacheKey("getComicById", id);
-        if (cache.containsKey(key)) {
-            LOG.info(CACHE_HIT_MSG, key);
-            return (ComicDto) cache.get(key);
-        }
-        LOG.info("Кэш МИСС Комиксы. Запрос к БД для ID: {}", id);
+
+        Object cached = cacheManager.get(key);
+        if (cached != null) return (ComicDto) cached;
+
+        LOG.info("Запрос к БД для ID: {}", id);
         Comic comic = comicRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, id)));
         ComicDto result = comicMapper.toDto(comic);
-        cache.put(key, result);
+        cacheManager.put(key, result);
         return result;
     }
 
     @SuppressWarnings("unchecked")
     public List<ComicDto> searchByTitle(String title) {
         ApiCacheKey key = new ApiCacheKey("searchByTitle", title);
-        if (cache.containsKey(key)) {
-            LOG.info(CACHE_HIT_MSG, key);
-            return (List<ComicDto>) cache.get(key);
-        }
-        LOG.info(CACHE_MISS_MSG);
+
+        Object cached = cacheManager.get(key);
+        if (cached != null) return (List<ComicDto>) cached;
+
         List<ComicDto> result = comicRepository.findByTitleContainingIgnoreCase(title)
             .stream().map(comicMapper::toDto).toList();
-        cache.put(key, result);
+        cacheManager.put(key, result);
         return result;
     }
 
     @SuppressWarnings("unchecked")
     public List<ComicDto> getComicsByAuthor(Long authorId) {
         ApiCacheKey key = new ApiCacheKey("getComicsByAuthor", authorId);
-        if (cache.containsKey(key)) {
-            LOG.info(CACHE_HIT_MSG, key);
-            return (List<ComicDto>) cache.get(key);
-        }
-        LOG.info(CACHE_MISS_MSG);
+
+        Object cached = cacheManager.get(key);
+        if (cached != null) return (List<ComicDto>) cached;
+
         List<ComicDto> result = comicRepository.findByAuthorId(authorId)
             .stream().map(comicMapper::toDto).toList();
-        cache.put(key, result);
+        cacheManager.put(key, result);
         return result;
     }
 
@@ -121,24 +111,22 @@ public class ComicService {
     public List<ComicDto> searchComplex(String genreName, Integer minYear, int page, int size, boolean useNative) {
         ApiCacheKey key = new ApiCacheKey("searchComplex", genreName, minYear, page, size);
 
-        if (cache.containsKey(key)) {
-            LOG.info("Кэш ХИТ Комиксы (Complex): {}", key);
-            return (List<ComicDto>) cache.get(key);
-        }
+        Object cached = cacheManager.get(key);
+        if (cached != null) return (List<ComicDto>) cached;
 
-        LOG.info("Кэш МИСС Комиксы. Запрос к БД (useNative={})", useNative ? "true" : "false");
+        LOG.info("Запрос к БД (useNative={})", useNative ? "true" : "false");
         Pageable pageable = PageRequest.of(page, size);
         List<ComicDto> dtoList;
+
         if (useNative) {
-            List<ComicNativeProjection> projectionList
-                = comicRepository.findByGenreAndYearNative(genreName, minYear, pageable);
+            List<ComicNativeProjection> projectionList = comicRepository.findByGenreAndYearNative(genreName, minYear, pageable);
             dtoList = projectionList.stream().map(this::mapProjectionToDto).toList();
         } else {
             List<Comic> comicList = comicRepository.findByGenreAndYearJpql(genreName, minYear, pageable);
             dtoList = comicList.stream().map(comicMapper::toDto).toList();
         }
 
-        cache.put(key, dtoList);
+        cacheManager.put(key, dtoList);
         return dtoList;
     }
 
@@ -182,7 +170,7 @@ public class ComicService {
         }
 
         Comic savedComic = comicRepository.save(comic);
-        invalidateCache();
+        cacheManager.invalidate();
         return comicMapper.toDto(savedComic);
     }
 
@@ -190,6 +178,7 @@ public class ComicService {
     public ComicDto update(Long id, ComicRequest request) {
         Comic existing = comicRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, id)));
+
         existing.setTitle(request.title());
         existing.setReleaseYear(request.releaseYear());
 
@@ -210,7 +199,7 @@ public class ComicService {
         }
 
         Comic updatedComic = comicRepository.save(existing);
-        invalidateCache();
+        cacheManager.invalidate();
         return comicMapper.toDto(updatedComic);
     }
 
@@ -220,7 +209,7 @@ public class ComicService {
             throw new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, id));
         }
         comicRepository.deleteById(id);
-        invalidateCache();
+        cacheManager.invalidate();
     }
 
     @Transactional
@@ -231,23 +220,19 @@ public class ComicService {
         if (request.title() != null) {
             existing.setTitle(request.title());
         }
-
         if (request.releaseYear() != null) {
             existing.setReleaseYear(request.releaseYear());
         }
-
         if (request.authorId() != null) {
             Author author = authorRepository.findById(request.authorId())
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(AUTHOR_NOT_FOUND_MSG, request.authorId())));
             existing.setAuthor(author);
         }
-
         if (request.publisherId() != null) {
             Publisher publisher = publisherRepository.findById(request.publisherId())
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(PUBLISHER_NOT_FOUND_MSG, request.publisherId())));
             existing.setPublisher(publisher);
         }
-
         if (request.genreIds() != null) {
             Set<Genre> genres = request.genreIds().stream()
                 .map(gId -> genreRepository.findById(gId)
@@ -257,7 +242,7 @@ public class ComicService {
         }
 
         Comic updatedComic = comicRepository.save(existing);
-        invalidateCache();
+        cacheManager.invalidate();
         return comicMapper.toDto(updatedComic);
     }
 }
