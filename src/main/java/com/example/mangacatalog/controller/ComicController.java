@@ -1,11 +1,11 @@
 package com.example.mangacatalog.controller;
+
 import com.example.mangacatalog.dto.ComicDto;
-import com.example.mangacatalog.dto.ComicRequest;
 import com.example.mangacatalog.dto.ComicPatchRequest;
+import com.example.mangacatalog.dto.ComicRequest;
 import com.example.mangacatalog.service.ComicService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,7 +45,6 @@ public class ComicController {
         return comicService.getComicsByAuthor(authorId);
     }
 
-
     @GetMapping("/complex-search")
     @Operation(summary = "Сложный поиск (Жанр + Год) с пагинацией и кэшированием")
     public List<ComicDto> searchComplex(
@@ -59,13 +58,13 @@ public class ComicController {
 
     @PostMapping
     @Operation(summary = "Добавить новый комикс в каталог")
-    public ComicDto create(@Valid @RequestBody ComicRequest request) {
+    public ComicDto create(@RequestBody ComicRequest request) {
         return comicService.create(request);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Обновить данные комикса")
-    public ComicDto update(@PathVariable("id") Long id, @Valid @RequestBody ComicRequest request) {
+    public ComicDto update(@PathVariable("id") Long id, @RequestBody ComicRequest request) {
         return comicService.update(id, request);
     }
 
@@ -78,7 +77,7 @@ public class ComicController {
 
     @PatchMapping("/{id}")
     @Operation(summary = "Частично обновить данные комикса")
-    public ComicDto patch(@PathVariable("id") Long id, @Valid @RequestBody ComicPatchRequest request) {
+    public ComicDto patch(@PathVariable("id") Long id, @RequestBody ComicPatchRequest request) {
         return comicService.patch(id, request);
     }
 }
