@@ -23,12 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -64,17 +59,16 @@ public class ComicService {
         this.validator = validator;
     }
 
-// ========== Методы чтения ==========
+    // ========== Методы чтения ==========
 
     @SuppressWarnings("unchecked")
     public List<ComicDto> getAll() {
         ApiCacheKey key = new ApiCacheKey("getAllComics");
         Object cached = cacheManager.get(key);
-        if (cached != null) {
-            return (List<ComicDto>) cached;
-        }
+        if (cached != null) return (List<ComicDto>) cached;
 
-        List<ComicDto> result = comicRepository.findAll().stream()
+        List<ComicDto> result = comicRepository.findAll()
+            .stream()
             .map(comicMapper::toDto)
             .toList();
         cacheManager.put(key, result);
@@ -84,13 +78,12 @@ public class ComicService {
     public ComicDto getById(Long id) {
         ApiCacheKey key = new ApiCacheKey("getComicById", id);
         Object cached = cacheManager.get(key);
-        if (cached != null) {
-            return (ComicDto) cached;
-        }
+        if (cached != null) return (ComicDto) cached;
 
         LOG.info("Запрос к БД для ID: {}", id);
         Comic comic = comicRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, id)));
+            .orElseThrow(() -> new ResourceNotFoundException(
+                String.format(COMIC_NOT_FOUND_MSG, id)));
         ComicDto result = comicMapper.toDto(comic);
         cacheManager.put(key, result);
         return result;
@@ -100,11 +93,10 @@ public class ComicService {
     public List<ComicDto> searchByTitle(String title) {
         ApiCacheKey key = new ApiCacheKey("searchByTitle", title);
         Object cached = cacheManager.get(key);
-        if (cached != null) {
-            return (List<ComicDto>) cached;
-        }
+        if (cached != null) return (List<ComicDto>) cached;
 
-        List<ComicDto> result = comicRepository.findByTitleContainingIgnoreCase(title)
+        List<ComicDto> result = comicRepository
+            .findByTitleContainingIgnoreCase(title)
             .stream()
             .map(comicMapper::toDto)
             .toList();
@@ -116,9 +108,7 @@ public class ComicService {
     public List<ComicDto> getComicsByAuthor(Long authorId) {
         ApiCacheKey key = new ApiCacheKey("getComicsByAuthor", authorId);
         Object cached = cacheManager.get(key);
-        if (cached != null) {
-            return (List<ComicDto>) cached;
-        }
+        if (cached != null) return (List<ComicDto>) cached;
 
         List<ComicDto> result = comicRepository.findByAuthorId(authorId)
             .stream()
@@ -129,22 +119,23 @@ public class ComicService {
     }
 
     @SuppressWarnings("unchecked")
-    public List<ComicDto> searchComplex(String genreName, Integer minYear, int page, int size, boolean useNative) {
+    public List<ComicDto> searchComplex(String genreName, Integer minYear,
+                                        int page, int size, boolean useNative) {
         ApiCacheKey key = new ApiCacheKey("searchComplex", genreName, minYear, page, size);
         Object cached = cacheManager.get(key);
-        if (cached != null) {
-            return (List<ComicDto>) cached;
-        }
+        if (cached != null) return (List<ComicDto>) cached;
 
         LOG.info("Запрос к БД (useNative={})", useNative ? "true" : "false");
         Pageable pageable = PageRequest.of(page, size);
         List<ComicDto> dtoList;
 
         if (useNative) {
-            List<ComicNativeProjection> projectionList = comicRepository.findByGenreAndYearNative(genreName, minYear, pageable);
+            List<ComicNativeProjection> projectionList =
+                comicRepository.findByGenreAndYearNative(genreName, minYear, pageable);
             dtoList = projectionList.stream().map(this::mapProjectionToDto).toList();
         } else {
-            List<Comic> comicList = comicRepository.findByGenreAndYearJpql(genreName, minYear, pageable);
+            List<Comic> comicList =
+                comicRepository.findByGenreAndYearJpql(genreName, minYear, pageable);
             dtoList = comicList.stream().map(comicMapper::toDto).toList();
         }
 
@@ -153,10 +144,10 @@ public class ComicService {
     }
 
     private ComicDto mapProjectionToDto(ComicNativeProjection proj) {
-        AuthorDto author = proj.getAuthorId() != null ?
-            new AuthorDto(proj.getAuthorId(), proj.getAuthorName()) : null;
-        PublisherDto publisher = proj.getPublisherId() != null ?
-            new PublisherDto(proj.getPublisherId(), proj.getPublisherName()) : null;
+        AuthorDto author = proj.getAuthorId() != null
+            ? new AuthorDto(proj.getAuthorId(), proj.getAuthorName()) : null;
+        PublisherDto publisher = proj.getPublisherId() != null
+            ? new PublisherDto(proj.getPublisherId(), proj.getPublisherName()) : null;
 
         Set<GenreDto> genres = new HashSet<>();
         if (proj.getGenreIds() != null && proj.getGenreNames() != null) {
@@ -166,10 +157,11 @@ public class ComicService {
                 genres.add(new GenreDto(Long.valueOf(ids[i]), names[i].trim()));
             }
         }
-        return new ComicDto(proj.getId(), proj.getTitle(), proj.getReleaseYear(), author, publisher, genres);
+        return new ComicDto(proj.getId(), proj.getTitle(),
+            proj.getReleaseYear(), author, publisher, genres);
     }
 
-// ========== Методы записи (с полной валидацией) ==========
+    // ========== Методы записи ==========
 
     @Transactional
     public ComicDto create(ComicRequest request) {
@@ -178,9 +170,9 @@ public class ComicService {
         Comic comic = new Comic();
         comic.setTitle(request.title());
         comic.setReleaseYear(request.releaseYear());
-        comic.setAuthor(resolved.author());
-        comic.setPublisher(resolved.publisher());
-        comic.setGenres(resolved.genres());
+        comic.setAuthor(resolved.author().orElse(null));
+        comic.setPublisher(resolved.publisher().orElse(null));
+        comic.setGenres(resolved.genres().orElseGet(HashSet::new));
 
         Comic savedComic = comicRepository.save(comic);
         cacheManager.invalidate();
@@ -190,15 +182,16 @@ public class ComicService {
     @Transactional
     public ComicDto update(Long id, ComicRequest request) {
         Comic existing = comicRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, id)));
+            .orElseThrow(() -> new ResourceNotFoundException(
+                String.format(COMIC_NOT_FOUND_MSG, id)));
 
         ResolvedEntities resolved = validateAndResolve(request);
 
         existing.setTitle(request.title());
         existing.setReleaseYear(request.releaseYear());
-        existing.setAuthor(resolved.author());
-        existing.setPublisher(resolved.publisher());
-        existing.setGenres(resolved.genres());
+        existing.setAuthor(resolved.author().orElse(null));
+        existing.setPublisher(resolved.publisher().orElse(null));
+        existing.setGenres(resolved.genres().orElseGet(HashSet::new));
 
         Comic updatedComic = comicRepository.save(existing);
         cacheManager.invalidate();
@@ -208,7 +201,8 @@ public class ComicService {
     @Transactional
     public void delete(Long id) {
         if (!comicRepository.existsById(id)) {
-            throw new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, id));
+            throw new ResourceNotFoundException(
+                String.format(COMIC_NOT_FOUND_MSG, id));
         }
         comicRepository.deleteById(id);
         cacheManager.invalidate();
@@ -217,7 +211,8 @@ public class ComicService {
     @Transactional
     public ComicDto patch(Long id, ComicPatchRequest request) {
         Comic existing = comicRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException(String.format(COMIC_NOT_FOUND_MSG, id)));
+            .orElseThrow(() -> new ResourceNotFoundException(
+                String.format(COMIC_NOT_FOUND_MSG, id)));
 
         ResolvedEntities resolved = validateAndResolve(request);
 
@@ -227,14 +222,14 @@ public class ComicService {
         if (request.releaseYear() != null) {
             existing.setReleaseYear(request.releaseYear());
         }
-        if (resolved.author() != null) {
-            existing.setAuthor(resolved.author());
+        if (request.authorId() != null) {
+            resolved.author().ifPresent(existing::setAuthor);
         }
-        if (resolved.publisher() != null) {
-            existing.setPublisher(resolved.publisher());
+        if (request.publisherId() != null) {
+            resolved.publisher().ifPresent(existing::setPublisher);
         }
-        if (resolved.genres() != null) {
-            existing.setGenres(resolved.genres());
+        if (request.genreIds() != null) {
+            resolved.genres().ifPresent(existing::setGenres);
         }
 
         Comic updatedComic = comicRepository.save(existing);
@@ -242,24 +237,20 @@ public class ComicService {
         return comicMapper.toDto(updatedComic);
     }
 
-// ========== Вспомогательные методы для валидации ==========
-
+    // ========== Валидация ==========
 
     private ResolvedEntities validateAndResolve(Object request) {
         Map<String, String> errors = new LinkedHashMap<>();
 
-        // 1. Аннотационная валидация
         collectAnnotationErrors(request, errors);
 
-        // 2. Извлекаем ID
         Long authorId = extractAuthorId(request);
         Long publisherId = extractPublisherId(request);
         Set<Long> genreIds = extractGenreIds(request);
 
-        // 3. Бизнес-валидация — каждая в отдельном методе
-        Author author = validateAuthor(authorId, errors);
-        Publisher publisher = validatePublisher(publisherId, errors);
-        Set<Genre> genres = validateGenres(genreIds, errors);
+        Optional<Author> author = validateAuthor(authorId, errors);
+        Optional<Publisher> publisher = validatePublisher(publisherId, errors);
+        Optional<Set<Genre>> genres = validateGenres(genreIds, errors);
 
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
@@ -290,29 +281,30 @@ public class ComicService {
     private Set<Long> extractGenreIds(Object request) {
         if (request instanceof ComicRequest cr) return cr.genreIds();
         if (request instanceof ComicPatchRequest pr) return pr.genreIds();
-        return null;
+        return Collections.emptySet();
     }
 
-    private Author validateAuthor(Long authorId, Map<String, String> errors) {
-        if (authorId == null) return null;
+    private Optional<Author> validateAuthor(Long authorId, Map<String, String> errors) {
+        if (authorId == null) return Optional.empty();
         if (!authorRepository.existsById(authorId)) {
             errors.put("authorId", String.format(AUTHOR_NOT_FOUND_MSG, authorId));
-            return null;
+            return Optional.empty();
         }
-        return authorRepository.getReferenceById(authorId);
+        return Optional.of(authorRepository.getReferenceById(authorId));
     }
 
-    private Publisher validatePublisher(Long publisherId, Map<String, String> errors) {
-        if (publisherId == null) return null;
+    private Optional<Publisher> validatePublisher(Long publisherId, Map<String, String> errors) {
+        if (publisherId == null) return Optional.empty();
         if (!publisherRepository.existsById(publisherId)) {
             errors.put("publisherId", String.format(PUBLISHER_NOT_FOUND_MSG, publisherId));
-            return null;
+            return Optional.empty();
         }
-        return publisherRepository.getReferenceById(publisherId);
+        return Optional.of(publisherRepository.getReferenceById(publisherId));
     }
 
-    private Set<Genre> validateGenres(Set<Long> genreIds, Map<String, String> errors) {
-        if (genreIds == null || genreIds.isEmpty()) return null;
+    private Optional<Set<Genre>> validateGenres(Set<Long> genreIds,
+                                                Map<String, String> errors) {
+        if (genreIds == null || genreIds.isEmpty()) return Optional.empty();
 
         List<Genre> foundGenres = genreRepository.findAllById(genreIds);
 
@@ -324,11 +316,15 @@ public class ComicService {
                 .filter(gId -> !foundIds.contains(gId))
                 .toList();
             errors.put("genreIds", String.format(GENRE_NOT_FOUND_MSG, missingIds));
-            return null;
+            return Optional.empty();
         }
 
-        return new HashSet<>(foundGenres);
+        return Optional.of(new HashSet<>(foundGenres));
     }
 
-    private record ResolvedEntities(Author author, Publisher publisher, Set<Genre> genres) {}
+    private record ResolvedEntities(
+        Optional<Author> author,
+        Optional<Publisher> publisher,
+        Optional<Set<Genre>> genres) {
+    }
 }
