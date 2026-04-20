@@ -15,6 +15,9 @@ import java.util.List;
 @Tag(name = "Комиксы", description = "Основной API для управления каталогом комиксов и манги")
 public class ComicController {
 
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 5;
+
     private final ComicService comicService;
 
     public ComicController(ComicService comicService) {
@@ -53,7 +56,9 @@ public class ComicController {
         @RequestParam(value = "page", defaultValue = "0") int page,
         @RequestParam(value = "size", defaultValue = "5") int size,
         @RequestParam(value = "useNative", defaultValue = "false") boolean useNative) {
-        return comicService.searchComplex(genreName, minYear, page, size, useNative);
+        int safePage = Math.max(page, DEFAULT_PAGE);
+        int safeSize = size > 0 ? size : DEFAULT_SIZE;
+        return comicService.searchComplex(genreName, minYear, safePage, safeSize, useNative);
     }
 
     @PostMapping

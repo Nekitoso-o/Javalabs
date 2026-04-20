@@ -9,19 +9,16 @@ public class ApiCacheKey {
 
     public ApiCacheKey(String operation, Object... params) {
         this.operation = operation;
-        this.params = params;
+        this.params = params == null ? new Object[0] : params.clone();
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         ApiCacheKey that = (ApiCacheKey) o;
-        return Objects.equals(operation, that.operation) && Arrays.equals(params, that.params);
+        return Objects.equals(operation, that.operation)
+            && Arrays.equals(params, that.params);
     }
 
     @Override
@@ -33,9 +30,6 @@ public class ApiCacheKey {
 
     @Override
     public String toString() {
-        return "ApiCacheKey{" +
-            "operation='" + operation + '\'' +
-            ", params=" + Arrays.toString(params) +
-            '}';
+        return "ApiCacheKey{operation='" + operation + "', params=" + Arrays.toString(params) + '}';
     }
 }

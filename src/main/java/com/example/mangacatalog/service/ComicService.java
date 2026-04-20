@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class ComicService {
@@ -247,62 +248,19 @@ public class ComicService {
     private ResolvedEntities validateAndResolve(Object request) {
         Map<String, String> errors = new LinkedHashMap<>();
 
-        // 1. Синтаксическая валидация (через аннотации @NotBlank, @NotNull и т.д.)
-        Set<ConstraintViolation<Object>> violations = validator.validate(request);
-        for (ConstraintViolation<Object> violation : violations) {
-            errors.put(violation.getPropertyPath().toString(), violation.getMessage());
-        }
+        // 1. Аннотационная валидация
+        collectAnnotationErrors(request, errors);
 
-        // 2. Извлекаем ID из соответствующего DTO
-        Long authorId = null;
-        Long publisherId = null;
-        Set<Long> genreIds = null;
+        // 2. Извлекаем ID
+        Long authorId = extractAuthorId(request);
+        Long publisherId = extractPublisherId(request);
+        Set<Long> genreIds = extractGenreIds(request);
 
-        if (request instanceof ComicRequest cr) {
-            authorId = cr.authorId();
-            publisherId = cr.publisherId();
-            genreIds = cr.genreIds();
-        } else if (request instanceof ComicPatchRequest pr) {
-            authorId = pr.authorId();
-            publisherId = pr.publisherId();
-            genreIds = pr.genreIds();
-        }
+        // 3. Бизнес-валидация — каждая в отдельном методе
+        Author author = validateAuthor(authorId, errors);
+        Publisher publisher = validatePublisher(publisherId, errors);
+        Set<Genre> genres = validateGenres(genreIds, errors);
 
-        // 3. Бизнес-валидация: проверяем существование ID
-        Author author = null;
-        if (authorId != null) {
-            author = authorRepository.findById(authorId).orElse(null);
-            if (author == null) {
-                errors.put("authorId", String.format(AUTHOR_NOT_FOUND_MSG, authorId));
-            }
-        }
-
-        Publisher publisher = null;
-        if (publisherId != null) {
-            publisher = publisherRepository.findById(publisherId).orElse(null);
-            if (publisher == null) {
-                errors.put("publisherId", String.format(PUBLISHER_NOT_FOUND_MSG, publisherId));
-            }
-        }
-
-        Set<Genre> genres = null;
-        if (genreIds != null) {
-            genres = new HashSet<>();
-            List<Long> notFoundGenreIds = new ArrayList<>();
-            for (Long genreId : genreIds) {
-                Genre genre = genreRepository.findById(genreId).orElse(null);
-                if (genre == null) {
-                    notFoundGenreIds.add(genreId);
-                } else {
-                    genres.add(genre);
-                }
-            }
-            if (!notFoundGenreIds.isEmpty()) {
-                errors.put("genreIds", String.format(GENRE_NOT_FOUND_MSG, notFoundGenreIds));
-            }
-        }
-
-        // 4. Если есть хоть одна ошибка - выбрасываем исключение со всеми
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
         }
@@ -310,7 +268,67 @@ public class ComicService {
         return new ResolvedEntities(author, publisher, genres);
     }
 
-
-    private record ResolvedEntities(Author author, Publisher publisher, Set<Genre> genres) {
+    private void collectAnnotationErrors(Object request, Map<String, String> errors) {
+        Set<ConstraintViolation<Object>> violations = validator.validate(request);
+        for (ConstraintViolation<Object> violation : violations) {
+            errors.put(violation.getPropertyPath().toString(), violation.getMessage());
+        }
     }
+
+    private Long extractAuthorId(Object request) {
+        if (request instanceof ComicRequest cr) return cr.authorId();
+        if (request instanceof ComicPatchRequest pr) return pr.authorId();
+        return null;
+    }
+
+    private Long extractPublisherId(Object request) {
+        if (request instanceof ComicRequest cr) return cr.publisherId();
+        if (request instanceof ComicPatchRequest pr) return pr.publisherId();
+        return null;
+    }
+
+    private Set<Long> extractGenreIds(Object request) {
+        if (request instanceof ComicRequest cr) return cr.genreIds();
+        if (request instanceof ComicPatchRequest pr) return pr.genreIds();
+        return null;
+    }
+
+    private Author validateAuthor(Long authorId, Map<String, String> errors) {
+        if (authorId == null) return null;
+        if (!authorRepository.existsById(authorId)) {
+            errors.put("authorId", String.format(AUTHOR_NOT_FOUND_MSG, authorId));
+            return null;
+        }
+        return authorRepository.getReferenceById(authorId);
+    }
+
+    private Publisher validatePublisher(Long publisherId, Map<String, String> errors) {
+        if (publisherId == null) return null;
+        if (!publisherRepository.existsById(publisherId)) {
+            errors.put("publisherId", String.format(PUBLISHER_NOT_FOUND_MSG, publisherId));
+            return null;
+        }
+        return publisherRepository.getReferenceById(publisherId);
+    }
+
+    private Set<Genre> validateGenres(Set<Long> genreIds, Map<String, String> errors) {
+        if (genreIds == null || genreIds.isEmpty()) return null;
+
+        List<Genre> foundGenres = genreRepository.findAllById(genreIds);
+
+        if (foundGenres.size() != genreIds.size()) {
+            Set<Long> foundIds = foundGenres.stream()
+                .map(Genre::getId)
+                .collect(Collectors.toSet());
+            List<Long> missingIds = genreIds.stream()
+                .filter(gId -> !foundIds.contains(gId))
+                .toList();
+            errors.put("genreIds", String.format(GENRE_NOT_FOUND_MSG, missingIds));
+            return null;
+        }
+
+        return new HashSet<>(foundGenres);
+    }
+
+    private record ResolvedEntities(Author author, Publisher publisher, Set<Genre> genres) {}
 }
