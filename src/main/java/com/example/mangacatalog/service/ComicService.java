@@ -59,7 +59,7 @@ public class ComicService {
         this.validator = validator;
     }
 
-    // ========== Методы чтения ==========
+
 
     @SuppressWarnings("unchecked")
     public List<ComicDto> getAll() {
@@ -161,7 +161,6 @@ public class ComicService {
             proj.getReleaseYear(), author, publisher, genres);
     }
 
-    // ========== Методы записи ==========
 
     @Transactional
     public ComicDto create(ComicRequest request) {
@@ -237,7 +236,6 @@ public class ComicService {
         return comicMapper.toDto(updatedComic);
     }
 
-    // ========== Валидация ==========
 
     private ResolvedEntities validateAndResolve(Object request) {
         Map<String, String> errors = new LinkedHashMap<>();

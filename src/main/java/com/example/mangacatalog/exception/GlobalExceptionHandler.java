@@ -21,7 +21,6 @@ public class GlobalExceptionHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    // <-- НОВЫЙ ОБРАБОТЧИК для сбора всех ошибок
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ErrorResponse> handleCustomValidation(ValidationException ex) {
         LOG.warn("Множественные ошибки валидации: {}", ex.getErrors());
@@ -86,5 +85,4 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
 
-// Обработчик для остальных ошибок остается без изменений...
 }

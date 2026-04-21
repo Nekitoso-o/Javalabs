@@ -1,4 +1,4 @@
-// exception/ValidationErrorsException.java
+
 package com.example.mangacatalog.exception;
 
 import java.util.Map;

@@ -17,8 +17,6 @@ public class ApiCacheManager {
     public Object get(final ApiCacheKey key) {
         Object result = cache.get(key);
         if (result != null) {
-            // Sonar: не логируем сам key (user-controlled data)
-            // логируем только факт HIT/MISS
             LOG.info("Cache HIT");
         } else {
             LOG.info("Cache MISS");

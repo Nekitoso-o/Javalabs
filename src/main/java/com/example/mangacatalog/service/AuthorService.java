@@ -24,7 +24,6 @@ public class AuthorService {
     private final AuthorRepository repository;
     private final AuthorMapper mapper;
 
-    // Внедряем наш новый CacheManager вместо ConcurrentHashMap
     private final ApiCacheManager cacheManager;
 
     public AuthorService(AuthorRepository repository, AuthorMapper mapper, ApiCacheManager cacheManager) {
@@ -37,7 +36,6 @@ public class AuthorService {
     public List<AuthorDto> getAll() {
         ApiCacheKey key = new ApiCacheKey("getAllAuthors");
 
-        // Пытаемся получить из кэша. Логирование HIT/MISS теперь внутри cacheManager
         Object cachedResult = cacheManager.get(key);
         if (cachedResult != null) {
             return (List<AuthorDto>) cachedResult;
@@ -46,7 +44,6 @@ public class AuthorService {
         LOG.info("Запрос к БД для получения всех авторов");
         List<AuthorDto> result = repository.findAll().stream().map(mapper::toDto).toList();
 
-        // Кладем в кэш
         cacheManager.put(key, result);
         return result;
     }
@@ -74,7 +71,6 @@ public class AuthorService {
         entity.setName(request.name());
         AuthorDto result = mapper.toDto(repository.save(entity));
 
-        // Инвалидируем кэш
         cacheManager.invalidate();
         return result;
     }
