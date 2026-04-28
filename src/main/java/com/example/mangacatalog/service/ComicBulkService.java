@@ -25,7 +25,10 @@ import java.util.stream.IntStream;
 @Service
 public class ComicBulkService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ComicBulkService.class);
+    private static final Logger LOG =
+        LoggerFactory.getLogger(ComicBulkService.class);
+
+    private static final String ELEMENT_PREFIX = "Элемент [";
 
     private final ComicRepository comicRepository;
     private final AuthorRepository authorRepository;
@@ -48,29 +51,29 @@ public class ComicBulkService {
         this.cacheManager = cacheManager;
     }
 
-
     @Transactional
     public BulkComicResult createBulk(List<ComicRequest> requests) {
         LOG.info("Bulk-создание старт: {} элементов", requests.size());
 
-
+        // Исправление 2: .toList() вместо .collect(Collectors.toList())
         List<ComicDto> created = IntStream.range(0, requests.size())
             .mapToObj(index -> {
                 ComicRequest request = requests.get(index);
-                LOG.debug("Bulk [{}]: обработка комикса '{}'", index, request.title());
-
+                LOG.debug("Bulk [{}]: обработка комикса '{}'",
+                    index, request.title());
                 Comic comic = buildComic(index, request);
                 Comic saved = comicRepository.save(comic);
-                LOG.debug("Bulk [{}]: сохранён с ID={}", index, saved.getId());
+                LOG.debug("Bulk [{}]: сохранён с ID={}",
+                    index, saved.getId());
                 return comicMapper.toDto(saved);
             })
-            .collect(Collectors.toList());
+            .toList();
 
         cacheManager.invalidate();
-        LOG.info("Bulk-создание завершено: создано {} комиксов", created.size());
+        LOG.info("Bulk-создание завершено: создано {} комиксов",
+            created.size());
         return new BulkComicResult(created, created.size());
     }
-
 
     private Comic buildComic(int index, ComicRequest request) {
 
@@ -78,18 +81,19 @@ public class ComicBulkService {
         Author author = Optional.ofNullable(request.authorId())
             .flatMap(authorRepository::findById)
             .orElseThrow(() -> new IllegalArgumentException(
-                "Элемент [" + index + "]: автор с ID " + request.authorId() + " не найден"));
+                ELEMENT_PREFIX + index + "]: автор с ID "
+                    + request.authorId() + " не найден"));
 
         Publisher publisher = Optional.ofNullable(request.publisherId())
             .flatMap(publisherRepository::findById)
             .orElseThrow(() -> new IllegalArgumentException(
-                "Элемент [" + index + "]: издатель с ID " + request.publisherId() + " не найден"));
+                ELEMENT_PREFIX + index + "]: издатель с ID "
+                    + request.publisherId() + " не найден"));
 
         Set<Genre> genres = Optional.ofNullable(request.genreIds())
             .filter(ids -> !ids.isEmpty())
             .map(ids -> {
                 List<Genre> found = genreRepository.findAllById(ids);
-
 
                 Set<Long> foundIds = found.stream()
                     .map(Genre::getId)
@@ -98,17 +102,19 @@ public class ComicBulkService {
                 List<Long> missingIds = ids.stream()
                     .filter(id -> !foundIds.contains(id))
                     .sorted()
-                    .collect(Collectors.toList());
+                    .toList();
 
                 if (!missingIds.isEmpty()) {
                     throw new IllegalArgumentException(
-                        "Элемент [" + index + "]: жанры с ID " + missingIds + " не найдены");
+                        ELEMENT_PREFIX + index + "]: жанры с ID "
+                            + missingIds + " не найдены");
                 }
 
                 return found.stream().collect(Collectors.toSet());
             })
             .orElseThrow(() -> new IllegalArgumentException(
-                "Элемент [" + index + "]: список жанров не может быть пустым"));
+                ELEMENT_PREFIX + index
+                    + "]: список жанров не может быть пустым"));
 
         Comic comic = new Comic();
         comic.setTitle(request.title());

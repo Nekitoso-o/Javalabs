@@ -12,8 +12,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 })
 class MangacatalogApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
-
+    @Test
+    void contextLoads() {
+        // Проверяет что Spring контекст загружается без ошибок
+    }
 }
