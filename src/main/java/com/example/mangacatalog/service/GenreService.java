@@ -26,8 +26,8 @@ public class GenreService {
     private final GenreMapper mapper;
     private final ApiCacheManager cacheManager;
 
-    public GenreService(GenreRepository repository, GenreMapper mapper, ApiCacheManager cacheManager) {
-        this.repository = repository;
+    public GenreService(GenreRepository repository, GenreMapper mapper, ApiCacheManager cacheManager)
+        {this.repository = repository;
         this.mapper = mapper;
         this.cacheManager = cacheManager;
     }
