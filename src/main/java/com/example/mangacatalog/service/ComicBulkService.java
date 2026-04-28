@@ -55,7 +55,6 @@ public class ComicBulkService {
     public BulkComicResult createBulk(List<ComicRequest> requests) {
         LOG.info("Bulk-создание старт: {} элементов", requests.size());
 
-        // Исправление 2: .toList() вместо .collect(Collectors.toList())
         List<ComicDto> created = IntStream.range(0, requests.size())
             .mapToObj(index -> {
                 ComicRequest request = requests.get(index);
