@@ -14,5 +14,6 @@ class MangacatalogApplicationTests {
 
     @Test
     void contextLoads() {
+        // Проверяет что Spring контекст загружается без ошибок
     }
 }
