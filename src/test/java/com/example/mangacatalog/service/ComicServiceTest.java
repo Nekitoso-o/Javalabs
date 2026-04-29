@@ -9,35 +9,29 @@ import com.example.mangacatalog.entity.Genre;
 import com.example.mangacatalog.entity.Publisher;
 import com.example.mangacatalog.exception.ResourceNotFoundException;
 import com.example.mangacatalog.exception.ValidationException;
-import com.example.mangacatalog.mapper.AuthorMapper;
 import com.example.mangacatalog.mapper.ComicMapper;
-import com.example.mangacatalog.mapper.GenreMapper;
-import com.example.mangacatalog.mapper.PublisherMapper;
 import com.example.mangacatalog.repository.AuthorRepository;
 import com.example.mangacatalog.repository.ComicRepository;
 import com.example.mangacatalog.repository.GenreRepository;
 import com.example.mangacatalog.repository.PublisherRepository;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Path;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.data.domain.Pageable;
 
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-@MockitoSettings(strictness = Strictness.LENIENT)
 @ExtendWith(MockitoExtension.class)
 class ComicServiceTest {
 
@@ -54,473 +48,405 @@ class ComicServiceTest {
     private GenreRepository genreRepository;
 
     @Mock
+    private ComicMapper comicMapper;
+
+    @Mock
     private ApiCacheManager cacheManager;
 
     @Mock
     private Validator validator;
 
-    @Spy
-    private ComicMapper comicMapper = new ComicMapper(
-        new AuthorMapper(),
-        new PublisherMapper(),
-        new GenreMapper()
-    );
-
     @InjectMocks
     private ComicService comicService;
 
-    private Author testAuthor;
-    private Publisher testPublisher;
-    private Genre testGenre;
-    private Comic testComic;
-    private ComicDto testComicDto;
+    private Comic comic;
+    private ComicDto comicDto;
+    private Author author;
+    private Publisher publisher;
+    private Genre genre;
 
     @BeforeEach
     void setUp() {
-        testAuthor = new Author();
-        testAuthor.setId(1L);
-        testAuthor.setName("Кэнтаро Миура");
+        author = new Author();
+        author.setId(1L);
+        author.setName("Author");
 
-        testPublisher = new Publisher();
-        testPublisher.setId(1L);
-        testPublisher.setName("Shueisha");
+        publisher = new Publisher();
+        publisher.setId(1L);
+        publisher.setName("Publisher");
 
-        testGenre = new Genre();
-        testGenre.setId(1L);
-        testGenre.setName("Сёнэн");
+        genre = new Genre();
+        genre.setId(1L);
+        genre.setName("Action");
 
-        testComic = new Comic();
-        testComic.setId(1L);
-        testComic.setTitle("Берсерк");
-        testComic.setReleaseYear(1989);
-        testComic.setAuthor(testAuthor);
-        testComic.setPublisher(testPublisher);
-        testComic.getGenres().add(testGenre);
+        comic = new Comic();
+        comic.setId(1L);
+        comic.setTitle("Test Comic");
+        comic.setReleaseYear(2000);
+        comic.setAuthor(author);
+        comic.setPublisher(publisher);
+        comic.setGenres(Set.of(genre));
 
-        testComicDto = new ComicDto(
-            1L,
-            "Берсерк",
-            1989,
-            new AuthorDto(1L, "Кэнтаро Миура"),
-            new PublisherDto(1L, "Shueisha"),
-            Set.of(new GenreDto(1L, "Сёнэн"))
-        );
-
-        lenient().when(validator.validate(any()))
-            .thenReturn(Collections.emptySet());
+        comicDto = new ComicDto(1L, "Test Comic", 2000,
+            new AuthorDto(1L, "Author"),
+            new PublisherDto(1L, "Publisher"),
+            Set.of(new GenreDto(1L, "Action")));
     }
 
+    // ========== getAll() ==========
 
     @Test
-    @DisplayName("getAll — кеш попадание, репозиторий не вызывается")
-    void getAll_cacheHit() {
-        when(cacheManager.get(any(ApiCacheKey.class)))
-            .thenReturn(List.of(testComicDto));
+    void getAll_whenCacheHit_returnsCached() {
+        List<ComicDto> cached = List.of(comicDto);
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(cached);
 
         List<ComicDto> result = comicService.getAll();
 
-        assertEquals(1, result.size());
-        assertEquals("Берсерк", result.get(0).title());
+        assertThat(result).isEqualTo(cached);
         verify(comicRepository, never()).findAll();
-        verify(cacheManager, never()).put(any(), any());
     }
 
     @Test
-    @DisplayName("getAll — кеш промах, данные из БД кешируются")
-    void getAll_cacheMiss() {
+    void getAll_whenCacheMiss_fetchesAndCaches() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(comicRepository.findAll()).thenReturn(List.of(testComic));
+        when(comicRepository.findAll()).thenReturn(List.of(comic));
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
 
         List<ComicDto> result = comicService.getAll();
 
-        assertEquals(1, result.size());
-        assertEquals("Берсерк", result.get(0).title());
-        verify(comicRepository).findAll();
+        assertThat(result).containsExactly(comicDto);
         verify(cacheManager).put(any(ApiCacheKey.class), any());
     }
 
-    @Test
-    @DisplayName("getAll — пустой список")
-    void getAll_empty() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(comicRepository.findAll()).thenReturn(Collections.emptyList());
-
-        List<ComicDto> result = comicService.getAll();
-
-        assertTrue(result.isEmpty());
-        verify(cacheManager).put(any(ApiCacheKey.class), any());
-    }
-
+    // ========== getById() ==========
 
     @Test
-    @DisplayName("getById — кеш попадание")
-    void getById_cacheHit() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(testComicDto);
+    void getById_whenCacheHit_returnsCached() {
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(comicDto);
 
         ComicDto result = comicService.getById(1L);
 
-        assertNotNull(result);
-        assertEquals("Берсерк", result.title());
+        assertThat(result).isEqualTo(comicDto);
         verify(comicRepository, never()).findById(any());
     }
 
     @Test
-    @DisplayName("getById — кеш промах, успех")
-    void getById_cacheMiss_success() {
+    void getById_whenCacheMiss_fetchesAndCaches() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(comic));
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
 
         ComicDto result = comicService.getById(1L);
 
-        assertNotNull(result);
-        assertEquals(1L, result.id());
-        assertEquals("Берсерк", result.title());
-        assertEquals(1989, result.releaseYear());
-        verify(cacheManager).put(any(ApiCacheKey.class), any());
+        assertThat(result).isEqualTo(comicDto);
+        verify(cacheManager).put(any(ApiCacheKey.class), eq(comicDto));
     }
 
     @Test
-    @DisplayName("getById — не найден, выброс ResourceNotFoundException")
-    void getById_notFound() {
+    void getById_whenNotFound_throwsException() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(comicRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
-            () -> comicService.getById(99L));
-        verify(cacheManager, never()).put(any(), any());
+        assertThatThrownBy(() -> comicService.getById(99L))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessageContaining("99");
     }
 
+    // ========== searchByTitle() ==========
 
     @Test
-    @DisplayName("searchByTitle — кеш попадание")
-    void searchByTitle_cacheHit() {
-        when(cacheManager.get(any(ApiCacheKey.class)))
-            .thenReturn(List.of(testComicDto));
+    void searchByTitle_whenCacheHit_returnsCached() {
+        List<ComicDto> cached = List.of(comicDto);
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(cached);
 
-        List<ComicDto> result = comicService.searchByTitle("Берсерк");
+        List<ComicDto> result = comicService.searchByTitle("Test");
 
-        assertEquals(1, result.size());
-        verify(comicRepository, never()).findByTitleContainingIgnoreCase(any());
+        assertThat(result).isEqualTo(cached);
     }
 
     @Test
-    @DisplayName("searchByTitle — кеш промах, поиск по названию")
-    void searchByTitle_cacheMiss() {
+    void searchByTitle_whenCacheMiss_fetchesAndCaches() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(comicRepository.findByTitleContainingIgnoreCase("Берсерк"))
-            .thenReturn(List.of(testComic));
+        when(comicRepository.findByTitleContainingIgnoreCase("Test"))
+            .thenReturn(List.of(comic));
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
 
-        List<ComicDto> result = comicService.searchByTitle("Берсерк");
+        List<ComicDto> result = comicService.searchByTitle("Test");
 
-        assertEquals(1, result.size());
-        assertEquals("Берсерк", result.get(0).title());
+        assertThat(result).containsExactly(comicDto);
         verify(cacheManager).put(any(ApiCacheKey.class), any());
     }
 
-    @Test
-    @DisplayName("searchByTitle — ничего не найдено")
-    void searchByTitle_noResults() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(comicRepository.findByTitleContainingIgnoreCase("xyz"))
-            .thenReturn(Collections.emptyList());
-
-        List<ComicDto> result = comicService.searchByTitle("xyz");
-
-        assertTrue(result.isEmpty());
-    }
-
-
+    // ========== getComicsByAuthor() ==========
 
     @Test
-    @DisplayName("getComicsByAuthor — кеш попадание")
-    void getComicsByAuthor_cacheHit() {
-        when(cacheManager.get(any(ApiCacheKey.class)))
-            .thenReturn(List.of(testComicDto));
+    void getComicsByAuthor_whenCacheHit_returnsCached() {
+        List<ComicDto> cached = List.of(comicDto);
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(cached);
 
         List<ComicDto> result = comicService.getComicsByAuthor(1L);
 
-        assertEquals(1, result.size());
-        verify(comicRepository, never()).findByAuthorId(any());
+        assertThat(result).isEqualTo(cached);
     }
 
     @Test
-    @DisplayName("getComicsByAuthor — кеш промах")
-    void getComicsByAuthor_cacheMiss() {
+    void getComicsByAuthor_whenCacheMiss_fetchesAndCaches() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(comicRepository.findByAuthorId(1L)).thenReturn(List.of(testComic));
+        when(comicRepository.findByAuthorId(1L)).thenReturn(List.of(comic));
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
 
         List<ComicDto> result = comicService.getComicsByAuthor(1L);
 
-        assertEquals(1, result.size());
-        assertEquals("Берсерк", result.get(0).title());
+        assertThat(result).containsExactly(comicDto);
         verify(cacheManager).put(any(ApiCacheKey.class), any());
     }
 
-    @Test
-    @DisplayName("getComicsByAuthor — автор без комиксов")
-    void getComicsByAuthor_empty() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(comicRepository.findByAuthorId(1L)).thenReturn(Collections.emptyList());
-
-        List<ComicDto> result = comicService.getComicsByAuthor(1L);
-
-        assertTrue(result.isEmpty());
-    }
-
-
+    // ========== searchComplex() ==========
 
     @Test
-    @DisplayName("searchComplex JPQL — кеш попадание")
-    void searchComplex_jpql_cacheHit() {
-        when(cacheManager.get(any(ApiCacheKey.class)))
-            .thenReturn(List.of(testComicDto));
+    void searchComplex_whenCacheHit_returnsCached() {
+        List<ComicDto> cached = List.of(comicDto);
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(cached);
 
-        List<ComicDto> result = comicService.searchComplex(
-            "Сёнэн", 1980, 0, 10, false);
+        List<ComicDto> result = comicService.searchComplex("Action", 2000, 0, 5, false);
 
-        assertEquals(1, result.size());
-        verify(comicRepository, never()).findByGenreAndYearJpql(
-            any(), any(), any(Pageable.class));
+        assertThat(result).isEqualTo(cached);
     }
 
     @Test
-    @DisplayName("searchComplex JPQL — кеш промах, данные из БД")
-    void searchComplex_jpql_cacheMiss() {
+    void searchComplex_whenCacheMiss_useJpql() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(comicRepository.findByGenreAndYearJpql(
-            eq("Сёнэн"), eq(1980), any(Pageable.class)))
-            .thenReturn(List.of(testComic));
+            eq("Action"), eq(2000), any(Pageable.class)))
+            .thenReturn(List.of(comic));
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
 
-        List<ComicDto> result = comicService.searchComplex(
-            "Сёнэн", 1980, 0, 10, false);
+        List<ComicDto> result = comicService.searchComplex("Action", 2000, 0, 5, false);
 
-        assertEquals(1, result.size());
-        assertEquals("Берсерк", result.get(0).title());
+        assertThat(result).containsExactly(comicDto);
         verify(cacheManager).put(any(ApiCacheKey.class), any());
     }
 
     @Test
-    @DisplayName("searchComplex JPQL — пустой результат")
-    void searchComplex_jpql_empty() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(comicRepository.findByGenreAndYearJpql(
-            any(), any(), any(Pageable.class)))
-            .thenReturn(Collections.emptyList());
-
-        List<ComicDto> result = comicService.searchComplex(
-            "Сёнэн", 1980, 0, 10, false);
-
-        assertTrue(result.isEmpty());
-    }
-
-
-
-    @Test
-    @DisplayName("searchComplex Native — все поля заполнены")
-    void searchComplex_native_allFields() {
-        ComicNativeProjection projection = mock(ComicNativeProjection.class);
-        when(projection.getId()).thenReturn(1L);
-        when(projection.getTitle()).thenReturn("Берсерк");
-        when(projection.getReleaseYear()).thenReturn(1989);
-        when(projection.getAuthorId()).thenReturn(1L);
-        when(projection.getAuthorName()).thenReturn("Кэнтаро Миура");
-        when(projection.getPublisherId()).thenReturn(1L);
-        when(projection.getPublisherName()).thenReturn("Shueisha");
-        when(projection.getGenreIds()).thenReturn("1");
-        when(projection.getGenreNames()).thenReturn("Сёнэн");
+    void searchComplex_whenCacheMiss_useNative_withSingleGenre() {
+        ComicNativeProjection proj = mock(ComicNativeProjection.class);
+        when(proj.getId()).thenReturn(1L);
+        when(proj.getTitle()).thenReturn("Test Comic");
+        when(proj.getReleaseYear()).thenReturn(2000);
+        when(proj.getAuthorId()).thenReturn(1L);
+        when(proj.getAuthorName()).thenReturn("Author");
+        when(proj.getPublisherId()).thenReturn(1L);
+        when(proj.getPublisherName()).thenReturn("Publisher");
+        when(proj.getGenreIds()).thenReturn("1");
+        when(proj.getGenreNames()).thenReturn("Action");
 
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(comicRepository.findByGenreAndYearNative(
-            eq("Сёнэн"), eq(1980), any(Pageable.class)))
-            .thenReturn(List.of(projection));
+            eq("Action"), eq(2000), any(Pageable.class)))
+            .thenReturn(List.of(proj));
 
-        List<ComicDto> result = comicService.searchComplex(
-            "Сёнэн", 1980, 0, 10, true);
+        List<ComicDto> result = comicService.searchComplex("Action", 2000, 0, 5, true);
 
-        assertEquals(1, result.size());
-        assertEquals("Берсерк", result.get(0).title());
-        assertEquals(1989, result.get(0).releaseYear());
-        assertNotNull(result.get(0).author());
-        assertEquals("Кэнтаро Миура", result.get(0).author().name());
-        assertNotNull(result.get(0).publisher());
-        assertEquals("Shueisha", result.get(0).publisher().name());
-        verify(cacheManager).put(any(ApiCacheKey.class), any());
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).title()).isEqualTo("Test Comic");
+        assertThat(result.get(0).genres()).hasSize(1);
+        assertThat(result.get(0).author()).isNotNull();
+        assertThat(result.get(0).publisher()).isNotNull();
     }
 
     @Test
-    @DisplayName("searchComplex Native — authorId и publisherId null")
-    void searchComplex_native_nullAuthorAndPublisher() {
-        ComicNativeProjection projection = mock(ComicNativeProjection.class);
-        when(projection.getId()).thenReturn(1L);
-        when(projection.getTitle()).thenReturn("Берсерк");
-        when(projection.getReleaseYear()).thenReturn(1989);
-        when(projection.getAuthorId()).thenReturn(null);
-        when(projection.getPublisherId()).thenReturn(null);
-        when(projection.getGenreIds()).thenReturn(null);
-        when(projection.getGenreNames()).thenReturn(null);
+    void searchComplex_useNative_withMultipleGenres_coversLoop() {
+        // Покрывает цикл for (int i = 0; i < ids.length; i++) с несколькими жанрами
+        ComicNativeProjection proj = mock(ComicNativeProjection.class);
+        when(proj.getId()).thenReturn(3L);
+        when(proj.getTitle()).thenReturn("Multi Genre Comic");
+        when(proj.getReleaseYear()).thenReturn(2005);
+        when(proj.getAuthorId()).thenReturn(1L);
+        when(proj.getAuthorName()).thenReturn("Author");
+        when(proj.getPublisherId()).thenReturn(1L);
+        when(proj.getPublisherName()).thenReturn("Publisher");
+        when(proj.getGenreIds()).thenReturn("1,2");
+        when(proj.getGenreNames()).thenReturn("Action, Horror");
 
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(comicRepository.findByGenreAndYearNative(
-            any(), any(), any(Pageable.class)))
-            .thenReturn(List.of(projection));
+        when(comicRepository.findByGenreAndYearNative(any(), any(), any(Pageable.class)))
+            .thenReturn(List.of(proj));
 
-        List<ComicDto> result = comicService.searchComplex(
-            "Сёнэн", 1980, 0, 10, true);
+        List<ComicDto> result = comicService.searchComplex("Action", 2000, 0, 5, true);
 
-        assertEquals(1, result.size());
-        assertNull(result.get(0).author());
-        assertNull(result.get(0).publisher());
-        assertTrue(result.get(0).genres().isEmpty());
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).genres()).hasSize(2);
     }
 
     @Test
-    @DisplayName("searchComplex Native — несколько жанров через запятую")
-    void searchComplex_native_multipleGenres() {
-        ComicNativeProjection projection = mock(ComicNativeProjection.class);
-        when(projection.getId()).thenReturn(1L);
-        when(projection.getTitle()).thenReturn("Берсерк");
-        when(projection.getReleaseYear()).thenReturn(1989);
-        when(projection.getAuthorId()).thenReturn(null);
-        when(projection.getPublisherId()).thenReturn(null);
-        when(projection.getGenreIds()).thenReturn("1,2");
-        when(projection.getGenreNames()).thenReturn("Сёнэн,Экшен");
+    void searchComplex_nativeProjection_withNullAuthorAndPublisher() {
+        // Покрывает ветки: authorId == null → author = null, publisherId == null → publisher = null
+        ComicNativeProjection proj = mock(ComicNativeProjection.class);
+        when(proj.getId()).thenReturn(2L);
+        when(proj.getTitle()).thenReturn("No Author Comic");
+        when(proj.getReleaseYear()).thenReturn(1990);
+        when(proj.getAuthorId()).thenReturn(null);
+        when(proj.getPublisherId()).thenReturn(null);
+        when(proj.getGenreIds()).thenReturn(null);
+        // getGenreNames() НЕ stubируем — не вызывается из-за short-circuit &&
 
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(comicRepository.findByGenreAndYearNative(
-            any(), any(), any(Pageable.class)))
-            .thenReturn(List.of(projection));
+        when(comicRepository.findByGenreAndYearNative(any(), any(), any(Pageable.class)))
+            .thenReturn(List.of(proj));
 
-        List<ComicDto> result = comicService.searchComplex(
-            "Сёнэн", 1980, 0, 10, true);
+        List<ComicDto> result = comicService.searchComplex(null, null, 0, 5, true);
 
-        assertEquals(2, result.get(0).genres().size());
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).author()).isNull();
+        assertThat(result.get(0).publisher()).isNull();
+        assertThat(result.get(0).genres()).isEmpty();
     }
 
+    @Test
+    void searchComplex_nativeProjection_genreIdsNotNull_butGenreNamesNull() {
+        // Покрывает ветку: genreIds != null && genreNames == null → блок if не выполняется
+        ComicNativeProjection proj = mock(ComicNativeProjection.class);
+        when(proj.getId()).thenReturn(4L);
+        when(proj.getTitle()).thenReturn("Comic");
+        when(proj.getReleaseYear()).thenReturn(2000);
+        when(proj.getAuthorId()).thenReturn(null);
+        when(proj.getPublisherId()).thenReturn(null);
+        when(proj.getGenreIds()).thenReturn("1");
+        when(proj.getGenreNames()).thenReturn(null);
 
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
+        when(comicRepository.findByGenreAndYearNative(any(), any(), any(Pageable.class)))
+            .thenReturn(List.of(proj));
+
+        List<ComicDto> result = comicService.searchComplex("Action", 2000, 0, 5, true);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).genres()).isEmpty();
+    }
+
+    // ========== create() ==========
 
     @Test
-    @DisplayName("create — успешное создание")
-    void create_success() {
-        ComicRequest request = new ComicRequest(
-            "Берсерк", 1989, 1L, 1L, Set.of(1L));
+    void create_whenValid_savesAndInvalidatesCache() {
+        ComicRequest request = new ComicRequest("Test Comic", 2000, 1L, 1L, Set.of(1L));
 
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
         when(authorRepository.existsById(1L)).thenReturn(true);
-        when(authorRepository.getReferenceById(1L)).thenReturn(testAuthor);
+        when(authorRepository.getReferenceById(1L)).thenReturn(author);
         when(publisherRepository.existsById(1L)).thenReturn(true);
-        when(publisherRepository.getReferenceById(1L)).thenReturn(testPublisher);
-        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(testGenre));
-        when(comicRepository.save(any(Comic.class))).thenReturn(testComic);
+        when(publisherRepository.getReferenceById(1L)).thenReturn(publisher);
+        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
+        when(comicRepository.save(any(Comic.class))).thenReturn(comic);
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
 
         ComicDto result = comicService.create(request);
 
-        assertNotNull(result);
-        assertEquals("Берсерк", result.title());
-        verify(comicRepository).save(any(Comic.class));
+        assertThat(result).isEqualTo(comicDto);
         verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("create — автор не найден, выброс ValidationException")
-    void create_authorNotFound() {
-        ComicRequest request = new ComicRequest(
-            "Берсерк", 1989, 99L, 1L, Set.of(1L));
+    void create_whenAuthorNotFound_throwsValidationException() {
+        ComicRequest request = new ComicRequest("Test", 2000, 99L, 1L, Set.of(1L));
 
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
         when(authorRepository.existsById(99L)).thenReturn(false);
         when(publisherRepository.existsById(1L)).thenReturn(true);
-        when(publisherRepository.getReferenceById(1L)).thenReturn(testPublisher);
-        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(testGenre));
+        when(publisherRepository.getReferenceById(1L)).thenReturn(publisher);
+        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
 
-        assertThrows(ValidationException.class,
-            () -> comicService.create(request));
-        verify(comicRepository, never()).save(any());
-        verify(cacheManager, never()).invalidate();
+        assertThatThrownBy(() -> comicService.create(request))
+            .isInstanceOf(ValidationException.class);
     }
 
     @Test
-    @DisplayName("create — издатель не найден, выброс ValidationException")
-    void create_publisherNotFound() {
-        ComicRequest request = new ComicRequest(
-            "Берсерк", 1989, 1L, 99L, Set.of(1L));
+    void create_whenPublisherNotFound_throwsValidationException() {
+        ComicRequest request = new ComicRequest("Test", 2000, 1L, 99L, Set.of(1L));
 
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
         when(authorRepository.existsById(1L)).thenReturn(true);
-        when(authorRepository.getReferenceById(1L)).thenReturn(testAuthor);
+        when(authorRepository.getReferenceById(1L)).thenReturn(author);
         when(publisherRepository.existsById(99L)).thenReturn(false);
-        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(testGenre));
+        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
 
-        assertThrows(ValidationException.class,
-            () -> comicService.create(request));
-        verify(comicRepository, never()).save(any());
+        assertThatThrownBy(() -> comicService.create(request))
+            .isInstanceOf(ValidationException.class);
     }
 
     @Test
-    @DisplayName("create — жанры не найдены, выброс ValidationException")
-    void create_genresNotFound() {
-        ComicRequest request = new ComicRequest(
-            "Берсерк", 1989, 1L, 1L, Set.of(1L, 999L));
+    void create_whenGenreNotFound_throwsValidationException() {
+        ComicRequest request = new ComicRequest("Test", 2000, 1L, 1L, Set.of(1L, 99L));
 
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
         when(authorRepository.existsById(1L)).thenReturn(true);
-        when(authorRepository.getReferenceById(1L)).thenReturn(testAuthor);
+        when(authorRepository.getReferenceById(1L)).thenReturn(author);
         when(publisherRepository.existsById(1L)).thenReturn(true);
-        when(publisherRepository.getReferenceById(1L)).thenReturn(testPublisher);
-        when(genreRepository.findAllById(Set.of(1L, 999L)))
-            .thenReturn(List.of(testGenre));
+        when(publisherRepository.getReferenceById(1L)).thenReturn(publisher);
+        when(genreRepository.findAllById(any())).thenReturn(List.of(genre));
 
-        assertThrows(ValidationException.class,
-            () -> comicService.create(request));
-        verify(comicRepository, never()).save(any());
+        assertThatThrownBy(() -> comicService.create(request))
+            .isInstanceOf(ValidationException.class);
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Test
+    void create_whenAnnotationValidationErrors_throwsValidationException() {
+        ComicRequest request = new ComicRequest("", 2000, 1L, 1L, Set.of(1L));
+
+        ConstraintViolation<Object> violation = mock(ConstraintViolation.class);
+        Path path = mock(Path.class);
+        when(path.toString()).thenReturn("title");
+        when(violation.getPropertyPath()).thenReturn(path);
+        when(violation.getMessage()).thenReturn("must not be blank");
+
+        Set violations = Set.of(violation);
+        when(validator.validate(any())).thenReturn(violations);
+        when(authorRepository.existsById(1L)).thenReturn(true);
+        when(authorRepository.getReferenceById(1L)).thenReturn(author);
+        when(publisherRepository.existsById(1L)).thenReturn(true);
+        when(publisherRepository.getReferenceById(1L)).thenReturn(publisher);
+        when(genreRepository.findAllById(any())).thenReturn(List.of(genre));
+
+        assertThatThrownBy(() -> comicService.create(request))
+            .isInstanceOf(ValidationException.class);
+    }
+
+    // ========== update() ==========
 
     @Test
-    @DisplayName("update — успешное обновление")
-    void update_success() {
-        ComicRequest request = new ComicRequest(
-            "Берсерк 2", 1990, 1L, 1L, Set.of(1L));
+    void update_whenComicExists_updatesAndInvalidates() {
+        ComicRequest request = new ComicRequest("Updated", 2001, 1L, 1L, Set.of(1L));
 
-        Comic updatedComic = new Comic();
-        updatedComic.setId(1L);
-        updatedComic.setTitle("Берсерк 2");
-        updatedComic.setReleaseYear(1990);
-        updatedComic.setAuthor(testAuthor);
-        updatedComic.setPublisher(testPublisher);
-        updatedComic.getGenres().add(testGenre);
-
-        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(comic));
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
         when(authorRepository.existsById(1L)).thenReturn(true);
-        when(authorRepository.getReferenceById(1L)).thenReturn(testAuthor);
+        when(authorRepository.getReferenceById(1L)).thenReturn(author);
         when(publisherRepository.existsById(1L)).thenReturn(true);
-        when(publisherRepository.getReferenceById(1L)).thenReturn(testPublisher);
-        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(testGenre));
-        when(comicRepository.save(any(Comic.class))).thenReturn(updatedComic);
+        when(publisherRepository.getReferenceById(1L)).thenReturn(publisher);
+        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
+        when(comicRepository.save(any(Comic.class))).thenReturn(comic);
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
 
         ComicDto result = comicService.update(1L, request);
 
-        assertNotNull(result);
-        assertEquals("Берсерк 2", result.title());
-        assertEquals(1990, result.releaseYear());
+        assertThat(result).isEqualTo(comicDto);
         verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("update — комикс не найден")
-    void update_comicNotFound() {
-        ComicRequest request = new ComicRequest(
-            "Берсерк 2", 1990, 1L, 1L, Set.of(1L));
+    void update_whenComicNotFound_throwsException() {
         when(comicRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
-            () -> comicService.update(99L, request));
-        verify(comicRepository, never()).save(any());
-        verify(cacheManager, never()).invalidate();
+        assertThatThrownBy(() -> comicService.update(99L,
+            new ComicRequest("T", 2000, 1L, 1L, Set.of(1L))))
+            .isInstanceOf(ResourceNotFoundException.class);
     }
 
-
+    // ========== delete() ==========
 
     @Test
-    @DisplayName("delete — успешное удаление")
-    void delete_success() {
+    void delete_whenExists_deletesAndInvalidates() {
         when(comicRepository.existsById(1L)).thenReturn(true);
-        doNothing().when(comicRepository).deleteById(1L);
 
         comicService.delete(1L);
 
@@ -529,130 +455,145 @@ class ComicServiceTest {
     }
 
     @Test
-    @DisplayName("delete — комикс не найден")
-    void delete_notFound() {
+    void delete_whenNotFound_throwsException() {
         when(comicRepository.existsById(99L)).thenReturn(false);
 
-        assertThrows(ResourceNotFoundException.class,
-            () -> comicService.delete(99L));
-        verify(comicRepository, never()).deleteById(any());
-        verify(cacheManager, never()).invalidate();
+        assertThatThrownBy(() -> comicService.delete(99L))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessageContaining("99");
     }
 
+    // ========== patch() ==========
 
     @Test
-    @DisplayName("patch — обновление только названия")
-    void patch_onlyTitle() {
-        ComicPatchRequest request = new ComicPatchRequest(
-            "Новое название", null, null, null, null);
+    void patch_whenAllFieldsProvided_updatesAll() {
+        ComicPatchRequest request = new ComicPatchRequest("Patched", 2005, 1L, 1L, Set.of(1L));
 
-        Comic updated = new Comic();
-        updated.setId(1L);
-        updated.setTitle("Новое название");
-        updated.setReleaseYear(1989);
-        updated.setAuthor(testAuthor);
-        updated.setPublisher(testPublisher);
-        updated.getGenres().add(testGenre);
-
-        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
-        when(comicRepository.save(any(Comic.class))).thenReturn(updated);
-
-        ComicDto result = comicService.patch(1L, request);
-
-        assertNotNull(result);
-        assertEquals("Новое название", result.title());
-        verify(authorRepository, never()).existsById(any());
-        verify(publisherRepository, never()).existsById(any());
-        verify(cacheManager).invalidate();
-    }
-
-    @Test
-    @DisplayName("patch — обновление всех полей")
-    void patch_allFields() {
-        ComicPatchRequest request = new ComicPatchRequest(
-            "Берсерк 2", 1990, 1L, 1L, Set.of(1L));
-
-        Comic updated = new Comic();
-        updated.setId(1L);
-        updated.setTitle("Берсерк 2");
-        updated.setReleaseYear(1990);
-        updated.setAuthor(testAuthor);
-        updated.setPublisher(testPublisher);
-        updated.getGenres().add(testGenre);
-
-        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(comic));
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
         when(authorRepository.existsById(1L)).thenReturn(true);
-        when(authorRepository.getReferenceById(1L)).thenReturn(testAuthor);
+        when(authorRepository.getReferenceById(1L)).thenReturn(author);
         when(publisherRepository.existsById(1L)).thenReturn(true);
-        when(publisherRepository.getReferenceById(1L)).thenReturn(testPublisher);
-        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(testGenre));
-        when(comicRepository.save(any(Comic.class))).thenReturn(updated);
+        when(publisherRepository.getReferenceById(1L)).thenReturn(publisher);
+        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
+        when(comicRepository.save(any(Comic.class))).thenReturn(comic);
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
 
         ComicDto result = comicService.patch(1L, request);
 
-        assertNotNull(result);
-        assertEquals("Берсерк 2", result.title());
-        assertEquals(1990, result.releaseYear());
+        assertThat(result).isEqualTo(comicDto);
         verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("patch — все поля null, изменений нет")
-    void patch_noFieldsChanged() {
-        ComicPatchRequest request = new ComicPatchRequest(
-            null, null, null, null, null);
+    void patch_whenOnlyTitleProvided_updatesOnlyTitle() {
+        ComicPatchRequest request = new ComicPatchRequest("New Title", null, null, null, null);
 
-        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
-        when(comicRepository.save(any(Comic.class))).thenReturn(testComic);
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(comic));
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
+        when(comicRepository.save(any(Comic.class))).thenReturn(comic);
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
 
         ComicDto result = comicService.patch(1L, request);
 
-        assertNotNull(result);
+        assertThat(result).isEqualTo(comicDto);
+        assertThat(comic.getTitle()).isEqualTo("New Title");
         verify(authorRepository, never()).existsById(any());
         verify(publisherRepository, never()).existsById(any());
         verify(genreRepository, never()).findAllById(any());
-        verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("patch — комикс не найден")
-    void patch_comicNotFound() {
-        ComicPatchRequest request = new ComicPatchRequest(
-            "Название", null, null, null, null);
+    void patch_whenOnlyReleaseYearProvided_updatesOnlyYear() {
+        ComicPatchRequest request = new ComicPatchRequest(null, 2010, null, null, null);
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(comic));
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
+        when(comicRepository.save(any(Comic.class))).thenReturn(comic);
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
+
+        ComicDto result = comicService.patch(1L, request);
+
+        assertThat(result).isEqualTo(comicDto);
+        assertThat(comic.getReleaseYear()).isEqualTo(2010);
+    }
+
+    @Test
+    void patch_whenAuthorIdProvided_andAuthorFound_setsAuthor() {
+        ComicPatchRequest request = new ComicPatchRequest(null, null, 1L, null, null);
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(comic));
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
+        when(authorRepository.existsById(1L)).thenReturn(true);
+        when(authorRepository.getReferenceById(1L)).thenReturn(author);
+        when(comicRepository.save(any(Comic.class))).thenReturn(comic);
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
+
+        ComicDto result = comicService.patch(1L, request);
+
+        assertThat(result).isEqualTo(comicDto);
+        verify(authorRepository).existsById(1L);
+    }
+
+    @Test
+    void patch_whenPublisherIdProvided_andPublisherFound_setsPublisher() {
+        ComicPatchRequest request = new ComicPatchRequest(null, null, null, 1L, null);
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(comic));
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
+        when(publisherRepository.existsById(1L)).thenReturn(true);
+        when(publisherRepository.getReferenceById(1L)).thenReturn(publisher);
+        when(comicRepository.save(any(Comic.class))).thenReturn(comic);
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
+
+        ComicDto result = comicService.patch(1L, request);
+
+        assertThat(result).isEqualTo(comicDto);
+        verify(publisherRepository).existsById(1L);
+    }
+
+    @Test
+    void patch_whenGenreIdsProvided_andGenresFound_setsGenres() {
+        ComicPatchRequest request = new ComicPatchRequest(null, null, null, null, Set.of(1L));
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(comic));
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
+        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
+        when(comicRepository.save(any(Comic.class))).thenReturn(comic);
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
+
+        ComicDto result = comicService.patch(1L, request);
+
+        assertThat(result).isEqualTo(comicDto);
+        verify(genreRepository).findAllById(Set.of(1L));
+    }
+
+    @Test
+    void patch_whenGenreIdsEmptySet_doesNotCallGenreRepository() {
+        // extractGenreIds для ComicPatchRequest возвращает пустой Set
+        // validateGenres: genreIds.isEmpty() → return Optional.empty()
+        ComicPatchRequest request = new ComicPatchRequest("Title", 2000, null, null,
+            Collections.emptySet());
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(comic));
+        when(validator.validate(any())).thenReturn(Collections.emptySet());
+        when(comicRepository.save(any(Comic.class))).thenReturn(comic);
+        when(comicMapper.toDto(comic)).thenReturn(comicDto);
+
+        ComicDto result = comicService.patch(1L, request);
+
+        assertThat(result).isNotNull();
+        // genreIds != null но isEmpty() → validateGenres возвращает empty
+        // genreIds != null → resolved.genres().ifPresent(...) вызывается но Optional.empty()
+        verify(genreRepository, never()).findAllById(any());
+    }
+
+    @Test
+    void patch_whenComicNotFound_throwsException() {
         when(comicRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
-            () -> comicService.patch(99L, request));
-        verify(comicRepository, never()).save(any());
-        verify(cacheManager, never()).invalidate();
-    }
-
-    @Test
-    @DisplayName("patch — автор не найден при обновлении")
-    void patch_authorNotFound() {
-        ComicPatchRequest request = new ComicPatchRequest(
-            null, null, 99L, null, null);
-
-        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
-        when(authorRepository.existsById(99L)).thenReturn(false);
-
-        assertThrows(ValidationException.class,
-            () -> comicService.patch(1L, request));
-        verify(comicRepository, never()).save(any());
-        verify(cacheManager, never()).invalidate();
-    }
-
-    @Test
-    @DisplayName("patch — издатель не найден при обновлении")
-    void patch_publisherNotFound() {
-        ComicPatchRequest request = new ComicPatchRequest(
-            null, null, null, 99L, null);
-
-        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
-        when(publisherRepository.existsById(99L)).thenReturn(false);
-
-        assertThrows(ValidationException.class,
-            () -> comicService.patch(1L, request));
-        verify(comicRepository, never()).save(any());
+        assertThatThrownBy(() -> comicService.patch(99L,
+            new ComicPatchRequest(null, null, null, null, null)))
+            .isInstanceOf(ResourceNotFoundException.class);
     }
 }

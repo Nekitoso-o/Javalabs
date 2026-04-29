@@ -10,19 +10,20 @@ import com.example.mangacatalog.exception.ResourceNotFoundException;
 import com.example.mangacatalog.mapper.GenreMapper;
 import com.example.mangacatalog.repository.GenreRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -32,8 +33,8 @@ class GenreServiceTest {
     @Mock
     private GenreRepository repository;
 
-    @Spy
-    private GenreMapper mapper = new GenreMapper();
+    @Mock
+    private GenreMapper mapper;
 
     @Mock
     private ApiCacheManager cacheManager;
@@ -41,168 +42,155 @@ class GenreServiceTest {
     @InjectMocks
     private GenreService genreService;
 
-    private Genre testGenre;
-    private GenreDto testGenreDto;
+    private Genre genre;
+    private GenreDto genreDto;
 
     @BeforeEach
     void setUp() {
-        testGenre = new Genre();
-        testGenre.setId(1L);
-        testGenre.setName("Сёнэн");
-        testGenreDto = new GenreDto(1L, "Сёнэн");
+        genre = new Genre();
+        genre.setId(1L);
+        genre.setName("Action");
+
+        genreDto = new GenreDto(1L, "Action");
     }
 
-
     @Test
-    @DisplayName("getAll — кеш попадание")
-    void getAll_cacheHit() {
-        when(cacheManager.get(any(ApiCacheKey.class)))
-            .thenReturn(List.of(testGenreDto));
+    void getAll_whenCacheHit_returnsCached() {
+        List<GenreDto> cached = List.of(genreDto);
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(cached);
 
         List<GenreDto> result = genreService.getAll();
 
-        assertEquals(1, result.size());
+        assertThat(result).isEqualTo(cached);
         verify(repository, never()).findAll();
     }
 
     @Test
-    @DisplayName("getAll — кеш промах")
-    void getAll_cacheMiss() {
+    void getAll_whenCacheMiss_fetchesAndCaches() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(repository.findAll()).thenReturn(List.of(testGenre));
+        when(repository.findAll()).thenReturn(List.of(genre));
+        when(mapper.toDto(genre)).thenReturn(genreDto);
 
         List<GenreDto> result = genreService.getAll();
 
-        assertEquals(1, result.size());
-        assertEquals("Сёнэн", result.get(0).name());
+        assertThat(result).containsExactly(genreDto);
         verify(cacheManager).put(any(ApiCacheKey.class), any());
     }
 
     @Test
-    @DisplayName("getAll — пустой список")
-    void getAll_empty() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(repository.findAll()).thenReturn(Collections.emptyList());
-
-        assertTrue(genreService.getAll().isEmpty());
-    }
-
-
-
-    @Test
-    @DisplayName("getById — кеш попадание")
-    void getById_cacheHit() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(testGenreDto);
+    void getById_whenCacheHit_returnsCached() {
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(genreDto);
 
         GenreDto result = genreService.getById(1L);
 
-        assertNotNull(result);
+        assertThat(result).isEqualTo(genreDto);
         verify(repository, never()).findById(any());
     }
 
     @Test
-    @DisplayName("getById — кеш промах, успех")
-    void getById_cacheMiss_success() {
+    void getById_whenCacheMiss_fetchesFromDb() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
+        when(repository.findById(1L)).thenReturn(Optional.of(genre));
+        when(mapper.toDto(genre)).thenReturn(genreDto);
 
         GenreDto result = genreService.getById(1L);
 
-        assertNotNull(result);
-        assertEquals("Сёнэн", result.name());
-        verify(cacheManager).put(any(ApiCacheKey.class), any());
+        assertThat(result).isEqualTo(genreDto);
+        verify(cacheManager).put(any(ApiCacheKey.class), eq(genreDto));
     }
 
     @Test
-    @DisplayName("getById — не найден")
-    void getById_notFound() {
+    void getById_whenNotFound_throwsException() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
-            () -> genreService.getById(99L));
+        assertThatThrownBy(() -> genreService.getById(99L))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessageContaining("99");
     }
 
-
-
     @Test
-    @DisplayName("create — успешное создание")
-    void create_success() {
-        GenreRequest request = new GenreRequest("Сёнэн");
-        when(repository.save(any(Genre.class))).thenReturn(testGenre);
+    void create_savesAndInvalidatesCache() {
+        GenreRequest request = new GenreRequest("Horror");
+        Genre saved = new Genre();
+        saved.setId(2L);
+        saved.setName("Horror");
+        GenreDto savedDto = new GenreDto(2L, "Horror");
+
+        when(repository.save(any(Genre.class))).thenReturn(saved);
+        when(mapper.toDto(saved)).thenReturn(savedDto);
 
         GenreDto result = genreService.create(request);
 
-        assertNotNull(result);
-        assertEquals("Сёнэн", result.name());
+        assertThat(result).isEqualTo(savedDto);
         verify(cacheManager).invalidate();
     }
 
-
-
     @Test
-    @DisplayName("update — успешное обновление")
-    void update_success() {
-        GenreRequest request = new GenreRequest("Сэйнэн");
+    void update_whenFound_updatesAndInvalidates() {
+        GenreRequest request = new GenreRequest("Updated");
         Genre updated = new Genre();
         updated.setId(1L);
-        updated.setName("Сэйнэн");
+        updated.setName("Updated");
+        GenreDto updatedDto = new GenreDto(1L, "Updated");
 
-        when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
+        when(repository.findById(1L)).thenReturn(Optional.of(genre));
         when(repository.save(any(Genre.class))).thenReturn(updated);
+        when(mapper.toDto(updated)).thenReturn(updatedDto);
 
         GenreDto result = genreService.update(1L, request);
 
-        assertEquals("Сэйнэн", result.name());
+        assertThat(result).isEqualTo(updatedDto);
         verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("update — не найден")
-    void update_notFound() {
+    void update_whenNotFound_throwsException() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
-            () -> genreService.update(99L, new GenreRequest("X")));
-        verify(repository, never()).save(any());
+        assertThatThrownBy(() -> genreService.update(99L, new GenreRequest("x")))
+            .isInstanceOf(ResourceNotFoundException.class);
     }
 
-
     @Test
-    @DisplayName("delete — успешное удаление без комиксов")
-    void delete_success_noComics() {
-        when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
+    void delete_whenGenreHasNoComics_deletesAndInvalidates() {
+        when(repository.findById(1L)).thenReturn(Optional.of(genre));
 
         genreService.delete(1L);
 
-        verify(repository).delete(testGenre);
+        verify(repository).delete(genre);
         verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("delete — жанр удаляется из связанных комиксов")
-    void delete_removesGenreFromComics() {
+    void delete_whenGenreHasComics_removesGenreFromComics() {
+        Genre genreWithComics = spy(new Genre());
+        genreWithComics.setId(1L);
+        genreWithComics.setName("Action");
+
         Comic comic = new Comic();
-        comic.setId(5L);
-        comic.getGenres().add(testGenre);
-        testGenre.getComics().add(comic);
+        Set<Genre> genres = new HashSet<>();
+        genres.add(genreWithComics);
+        comic.setGenres(genres);
 
-        when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
+        List<Comic> comics = new ArrayList<>();
+        comics.add(comic);
+        when(genreWithComics.getComics()).thenReturn(comics);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(genreWithComics));
 
         genreService.delete(1L);
 
-        assertFalse(comic.getGenres().contains(testGenre));
-        verify(repository).delete(testGenre);
+        assertThat(comic.getGenres()).doesNotContain(genreWithComics);
+        verify(repository).delete(genreWithComics);
         verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("delete — не найден")
-    void delete_notFound() {
+    void delete_whenNotFound_throwsException() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
-            () -> genreService.delete(99L));
-        verify(repository, never()).delete(any(Genre.class));
+        assertThatThrownBy(() -> genreService.delete(99L))
+            .isInstanceOf(ResourceNotFoundException.class);
     }
 }

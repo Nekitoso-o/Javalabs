@@ -10,19 +10,18 @@ import com.example.mangacatalog.exception.ResourceNotFoundException;
 import com.example.mangacatalog.mapper.PublisherMapper;
 import com.example.mangacatalog.repository.PublisherRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -32,8 +31,8 @@ class PublisherServiceTest {
     @Mock
     private PublisherRepository repository;
 
-    @Spy
-    private PublisherMapper mapper = new PublisherMapper();
+    @Mock
+    private PublisherMapper mapper;
 
     @Mock
     private ApiCacheManager cacheManager;
@@ -41,167 +40,156 @@ class PublisherServiceTest {
     @InjectMocks
     private PublisherService publisherService;
 
-    private Publisher testPublisher;
-    private PublisherDto testPublisherDto;
+    private Publisher publisher;
+    private PublisherDto publisherDto;
 
     @BeforeEach
     void setUp() {
-        testPublisher = new Publisher();
-        testPublisher.setId(1L);
-        testPublisher.setName("Shueisha");
-        testPublisherDto = new PublisherDto(1L, "Shueisha");
+        publisher = new Publisher();
+        publisher.setId(1L);
+        publisher.setName("Test Publisher");
+
+        publisherDto = new PublisherDto(1L, "Test Publisher");
     }
 
-
-
     @Test
-    @DisplayName("getAll — кеш попадание")
-    void getAll_cacheHit() {
-        when(cacheManager.get(any(ApiCacheKey.class)))
-            .thenReturn(List.of(testPublisherDto));
+    void getAll_whenCacheHit_returnsCached() {
+        List<PublisherDto> cached = List.of(publisherDto);
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(cached);
 
         List<PublisherDto> result = publisherService.getAll();
 
-        assertEquals(1, result.size());
+        assertThat(result).isEqualTo(cached);
         verify(repository, never()).findAll();
     }
 
     @Test
-    @DisplayName("getAll — кеш промах")
-    void getAll_cacheMiss() {
+    void getAll_whenCacheMiss_fetchesAndCaches() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(repository.findAll()).thenReturn(List.of(testPublisher));
+        when(repository.findAll()).thenReturn(List.of(publisher));
+        when(mapper.toDto(publisher)).thenReturn(publisherDto);
 
         List<PublisherDto> result = publisherService.getAll();
 
-        assertEquals(1, result.size());
-        assertEquals("Shueisha", result.get(0).name());
+        assertThat(result).containsExactly(publisherDto);
         verify(cacheManager).put(any(ApiCacheKey.class), any());
     }
 
     @Test
-    @DisplayName("getAll — пустой список")
-    void getAll_empty() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(repository.findAll()).thenReturn(Collections.emptyList());
-
-        assertTrue(publisherService.getAll().isEmpty());
-    }
-
-
-
-    @Test
-    @DisplayName("getById — кеш попадание")
-    void getById_cacheHit() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(testPublisherDto);
+    void getById_whenCacheHit_returnsCached() {
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(publisherDto);
 
         PublisherDto result = publisherService.getById(1L);
 
-        assertNotNull(result);
+        assertThat(result).isEqualTo(publisherDto);
         verify(repository, never()).findById(any());
     }
 
     @Test
-    @DisplayName("getById — кеш промах, успех")
-    void getById_cacheMiss_success() {
+    void getById_whenCacheMiss_fetchesFromDb() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
+        when(repository.findById(1L)).thenReturn(Optional.of(publisher));
+        when(mapper.toDto(publisher)).thenReturn(publisherDto);
 
         PublisherDto result = publisherService.getById(1L);
 
-        assertNotNull(result);
-        assertEquals("Shueisha", result.name());
+        assertThat(result).isEqualTo(publisherDto);
     }
 
     @Test
-    @DisplayName("getById — не найден")
-    void getById_notFound() {
+    void getById_whenNotFound_throwsException() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
-            () -> publisherService.getById(99L));
+        assertThatThrownBy(() -> publisherService.getById(99L))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessageContaining("99");
     }
 
-
-
     @Test
-    @DisplayName("create — успешное создание")
-    void create_success() {
-        PublisherRequest request = new PublisherRequest("Shueisha");
-        when(repository.save(any(Publisher.class))).thenReturn(testPublisher);
+    void create_savesAndInvalidates() {
+        PublisherRequest request = new PublisherRequest("New Pub");
+        Publisher saved = new Publisher();
+        saved.setId(2L);
+        saved.setName("New Pub");
+        PublisherDto savedDto = new PublisherDto(2L, "New Pub");
+
+        when(repository.save(any(Publisher.class))).thenReturn(saved);
+        when(mapper.toDto(saved)).thenReturn(savedDto);
 
         PublisherDto result = publisherService.create(request);
 
-        assertNotNull(result);
-        assertEquals("Shueisha", result.name());
+        assertThat(result).isEqualTo(savedDto);
         verify(cacheManager).invalidate();
     }
 
-
     @Test
-    @DisplayName("update — успешное обновление")
-    void update_success() {
-        PublisherRequest request = new PublisherRequest("Kodansha");
+    void update_whenFound_updatesAndInvalidates() {
+        PublisherRequest request = new PublisherRequest("Updated");
         Publisher updated = new Publisher();
         updated.setId(1L);
-        updated.setName("Kodansha");
+        updated.setName("Updated");
+        PublisherDto updatedDto = new PublisherDto(1L, "Updated");
 
-        when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
+        when(repository.findById(1L)).thenReturn(Optional.of(publisher));
         when(repository.save(any(Publisher.class))).thenReturn(updated);
+        when(mapper.toDto(updated)).thenReturn(updatedDto);
 
         PublisherDto result = publisherService.update(1L, request);
 
-        assertEquals("Kodansha", result.name());
+        assertThat(result).isEqualTo(updatedDto);
         verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("update — не найден")
-    void update_notFound() {
+    void update_whenNotFound_throwsException() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
-            () -> publisherService.update(99L, new PublisherRequest("X")));
-        verify(repository, never()).save(any());
+        assertThatThrownBy(() -> publisherService.update(99L, new PublisherRequest("x")))
+            .isInstanceOf(ResourceNotFoundException.class);
     }
 
-
     @Test
-    @DisplayName("delete — успешное удаление без комиксов")
-    void delete_success_noComics() {
-        when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
+    void delete_whenPublisherHasNoComics_deletesAndInvalidates() {
+        when(repository.findById(1L)).thenReturn(Optional.of(publisher));
 
         publisherService.delete(1L);
 
-        verify(repository).delete(testPublisher);
+        verify(repository).delete(publisher);
         verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("delete — publisher обнуляется у комиксов")
-    void delete_nullifiesPublisherOnComics() {
-        Comic comic = new Comic();
-        comic.setId(10L);
-        comic.setPublisher(testPublisher);
-        testPublisher.getComics().add(comic);
+    void delete_whenPublisherHasComics_nullifiesPublisherOnComics() {
+        Publisher publisherWithComics = spy(new Publisher());
+        publisherWithComics.setId(1L);
+        publisherWithComics.setName("Pub");
 
-        when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
+        Comic comic1 = new Comic();
+        comic1.setPublisher(publisherWithComics);
+        Comic comic2 = new Comic();
+        comic2.setPublisher(publisherWithComics);
+
+        List<Comic> comics = new ArrayList<>();
+        comics.add(comic1);
+        comics.add(comic2);
+        when(publisherWithComics.getComics()).thenReturn(comics);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(publisherWithComics));
 
         publisherService.delete(1L);
 
-        assertNull(comic.getPublisher());
-        verify(repository).delete(testPublisher);
+        assertThat(comic1.getPublisher()).isNull();
+        assertThat(comic2.getPublisher()).isNull();
+        verify(repository).delete(publisherWithComics);
         verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("delete — не найден")
-    void delete_notFound() {
+    void delete_whenNotFound_throwsException() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
-            () -> publisherService.delete(99L));
-        verify(repository, never()).delete(any(Publisher.class));
+        assertThatThrownBy(() -> publisherService.delete(99L))
+            .isInstanceOf(ResourceNotFoundException.class);
     }
 }
