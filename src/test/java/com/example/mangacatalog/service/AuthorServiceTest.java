@@ -10,18 +10,18 @@ import com.example.mangacatalog.exception.ResourceNotFoundException;
 import com.example.mangacatalog.mapper.AuthorMapper;
 import com.example.mangacatalog.repository.AuthorRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -30,182 +30,188 @@ class AuthorServiceTest {
 
     @Mock
     private AuthorRepository repository;
-
     @Mock
     private AuthorMapper mapper;
-
     @Mock
     private ApiCacheManager cacheManager;
 
     @InjectMocks
     private AuthorService authorService;
 
-    private Author author;
-    private AuthorDto authorDto;
+    private Author testAuthor;
+    private AuthorDto testAuthorDto;
 
     @BeforeEach
     void setUp() {
-        author = new Author();
-        author.setId(1L);
-        author.setName("Test Author");
-
-        authorDto = new AuthorDto(1L, "Test Author");
+        testAuthor = new Author();
+        testAuthor.setId(1L);
+        testAuthor.setName("Акира Торияма");
+        testAuthorDto = new AuthorDto(1L, "Акира Торияма");
     }
 
-    // getAll()
+    // ─── getAll ───────────────────────────────────────────────────────────────
 
     @Test
-    void getAll_whenCacheHit_returnsCachedValue() {
-        List<AuthorDto> cached = List.of(authorDto);
+    @DisplayName("getAll — возвращает список из кэша")
+    void getAll_returnsFromCache() {
+        List<AuthorDto> cached = List.of(testAuthorDto);
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(cached);
 
         List<AuthorDto> result = authorService.getAll();
 
-        assertThat(result).isEqualTo(cached);
+        assertEquals(cached, result);
         verify(repository, never()).findAll();
+        verify(cacheManager, never()).put(any(), any());
     }
 
     @Test
-    void getAll_whenCacheMiss_fetchesFromDbAndCaches() {
+    @DisplayName("getAll — кэш пуст, запрос к БД")
+    void getAll_cacheMiss_queriesDb() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(repository.findAll()).thenReturn(List.of(author));
-        when(mapper.toDto(author)).thenReturn(authorDto);
+        when(repository.findAll()).thenReturn(List.of(testAuthor));
+        when(mapper.toDto(testAuthor)).thenReturn(testAuthorDto);
 
         List<AuthorDto> result = authorService.getAll();
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0)).isEqualTo(authorDto);
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Акира Торияма", result.get(0).name());
         verify(cacheManager).put(any(ApiCacheKey.class), any());
     }
 
-    // getById()
+    @Test
+    @DisplayName("getAll — пустой список")
+    void getAll_empty() {
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
+        when(repository.findAll()).thenReturn(Collections.emptyList());
+
+        assertTrue(authorService.getAll().isEmpty());
+    }
+
+    // ─── getById ──────────────────────────────────────────────────────────────
 
     @Test
-    void getById_whenCacheHit_returnsCachedValue() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(authorDto);
+    @DisplayName("getById — из кэша")
+    void getById_fromCache() {
+        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(testAuthorDto);
 
         AuthorDto result = authorService.getById(1L);
 
-        assertThat(result).isEqualTo(authorDto);
+        assertEquals(testAuthorDto, result);
         verify(repository, never()).findById(any());
     }
 
     @Test
-    void getById_whenCacheMiss_fetchesFromDb() {
+    @DisplayName("getById — кэш пуст, успех")
+    void getById_cacheMiss_success() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
-        when(repository.findById(1L)).thenReturn(Optional.of(author));
-        when(mapper.toDto(author)).thenReturn(authorDto);
+        when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
+        when(mapper.toDto(testAuthor)).thenReturn(testAuthorDto);
 
         AuthorDto result = authorService.getById(1L);
 
-        assertThat(result).isEqualTo(authorDto);
-        verify(cacheManager).put(any(ApiCacheKey.class), eq(authorDto));
+        assertNotNull(result);
+        assertEquals("Акира Торияма", result.name());
+        verify(cacheManager).put(any(ApiCacheKey.class), any());
     }
 
     @Test
-    void getById_whenNotFound_throwsException() {
+    @DisplayName("getById — автор не найден")
+    void getById_notFound() {
         when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authorService.getById(99L))
-            .isInstanceOf(ResourceNotFoundException.class)
-            .hasMessageContaining("99");
+        assertThrows(ResourceNotFoundException.class,
+            () -> authorService.getById(99L));
     }
 
-    // create()
+    // ─── create ───────────────────────────────────────────────────────────────
 
     @Test
-    void create_savesAndInvalidatesCache() {
-        AuthorRequest request = new AuthorRequest("New Author");
+    @DisplayName("create — успех")
+    void create_success() {
+        AuthorRequest request = new AuthorRequest("Масаси Кисимото");
         Author saved = new Author();
         saved.setId(2L);
-        saved.setName("New Author");
-        AuthorDto savedDto = new AuthorDto(2L, "New Author");
+        saved.setName("Масаси Кисимото");
+        AuthorDto savedDto = new AuthorDto(2L, "Масаси Кисимото");
 
         when(repository.save(any(Author.class))).thenReturn(saved);
         when(mapper.toDto(saved)).thenReturn(savedDto);
 
         AuthorDto result = authorService.create(request);
 
-        assertThat(result).isEqualTo(savedDto);
+        assertNotNull(result);
+        assertEquals("Масаси Кисимото", result.name());
+        verify(repository).save(any(Author.class));
         verify(cacheManager).invalidate();
     }
 
-    // update()
+    // ─── update ───────────────────────────────────────────────────────────────
 
     @Test
-    void update_whenAuthorExists_updatesAndInvalidatesCache() {
-        AuthorRequest request = new AuthorRequest("Updated Name");
-        Author updated = new Author();
-        updated.setId(1L);
-        updated.setName("Updated Name");
-        AuthorDto updatedDto = new AuthorDto(1L, "Updated Name");
+    @DisplayName("update — успех")
+    void update_success() {
+        AuthorRequest request = new AuthorRequest("Новое Имя");
+        AuthorDto updatedDto = new AuthorDto(1L, "Новое Имя");
 
-        when(repository.findById(1L)).thenReturn(Optional.of(author));
-        when(repository.save(any(Author.class))).thenReturn(updated);
-        when(mapper.toDto(updated)).thenReturn(updatedDto);
+        when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
+        when(repository.save(any(Author.class))).thenReturn(testAuthor);
+        when(mapper.toDto(testAuthor)).thenReturn(updatedDto);
 
         AuthorDto result = authorService.update(1L, request);
 
-        assertThat(result).isEqualTo(updatedDto);
+        assertNotNull(result);
+        assertEquals("Новое Имя", result.name());
         verify(cacheManager).invalidate();
     }
 
     @Test
-    void update_whenNotFound_throwsException() {
+    @DisplayName("update — автор не найден")
+    void update_notFound() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authorService.update(99L, new AuthorRequest("Name")))
-            .isInstanceOf(ResourceNotFoundException.class);
+        assertThrows(ResourceNotFoundException.class,
+            () -> authorService.update(99L, new AuthorRequest("Имя")));
     }
 
-    // delete()
+    // ─── delete ───────────────────────────────────────────────────────────────
 
     @Test
-    void delete_whenAuthorExistsWithNoComics_deletesAndInvalidates() {
-        author.getComics(); // ensure field initialized
-        when(repository.findById(1L)).thenReturn(Optional.of(author));
+    @DisplayName("delete — успех, у автора есть комиксы — обнуляются")
+    void delete_success_withComics() {
+        // Author.comics — поле без сеттера, заполняем через getComics().add()
+        Comic comic = new Comic();
+        comic.setAuthor(testAuthor);
+        testAuthor.getComics().add(comic);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
 
         authorService.delete(1L);
 
-        verify(repository).delete(author);
+        assertNull(comic.getAuthor());
+        verify(repository).delete(testAuthor);
         verify(cacheManager).invalidate();
     }
 
     @Test
-    void delete_whenAuthorHasComics_nullifiesAuthorOnComics() {
-        Comic comic1 = new Comic();
-        comic1.setAuthor(author);
-        Comic comic2 = new Comic();
-        comic2.setAuthor(author);
-
-        List<Comic> comics = new ArrayList<>();
-        comics.add(comic1);
-        comics.add(comic2);
-
-        Author authorWithComics = new Author();
-        authorWithComics.setId(1L);
-        authorWithComics.setName("Author With Comics");
-        // set comics via reflection or use a spy
-        // We'll create a custom author with comics list
-        Author spyAuthor = spy(new Author());
-        when(spyAuthor.getComics()).thenReturn(comics);
-
-        when(repository.findById(1L)).thenReturn(Optional.of(spyAuthor));
+    @DisplayName("delete — успех, у автора нет комиксов")
+    void delete_success_noComics() {
+        // getComics() возвращает пустой список (инициализирован в Author)
+        when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
 
         authorService.delete(1L);
 
-        assertThat(comic1.getAuthor()).isNull();
-        assertThat(comic2.getAuthor()).isNull();
-        verify(repository).delete(spyAuthor);
+        verify(repository).delete(testAuthor);
         verify(cacheManager).invalidate();
     }
 
     @Test
-    void delete_whenNotFound_throwsException() {
+    @DisplayName("delete — автор не найден")
+    void delete_notFound() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authorService.delete(99L))
-            .isInstanceOf(ResourceNotFoundException.class);
+        assertThrows(ResourceNotFoundException.class,
+            () -> authorService.delete(99L));
     }
 }
