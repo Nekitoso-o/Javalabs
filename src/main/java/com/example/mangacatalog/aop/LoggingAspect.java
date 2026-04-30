@@ -24,13 +24,18 @@ public class LoggingAspect {
         String className = joinPoint.getSignature().getDeclaringType().getSimpleName();
         String methodName = joinPoint.getSignature().getName();
 
-        LOG.debug("AOP: Начало выполнения метода {}. {}()", className, methodName);
+        LOG.debug("AOP: Начало выполнения метода {}.{}()", className, methodName);
 
         try {
-            return joinPoint.proceed();
-        } finally {
+            Object result = joinPoint.proceed();
             long executionTime = System.currentTimeMillis() - startTime;
-            LOG.info("AOP: Метод {}.{}() выполнен за {} мс", className, methodName, executionTime);
+            LOG.debug("AOP: Метод {}.{}() выполнен за {} мс", className, methodName, executionTime);
+            return result;
+        } catch (Throwable ex) {
+            long executionTime = System.currentTimeMillis() - startTime;
+            LOG.debug("AOP: Метод {}.{}() завершился с ошибкой за {} мс | error={}",
+                className, methodName, executionTime, ex.getMessage());
+            throw ex;
         }
     }
 }

@@ -17,20 +17,20 @@ public class ApiCacheManager {
     public Object get(final ApiCacheKey key) {
         Object result = cache.get(key);
         if (result != null) {
-            LOG.info("Cache HIT");
+            LOG.debug("Cache HIT  | key={}", key);
         } else {
-            LOG.info("Cache MISS");
+            LOG.debug("Cache MISS | key={}", key);
         }
         return result;
     }
 
     public void put(final ApiCacheKey key, final Object value) {
-        LOG.info("Cache PUT");
+        LOG.debug("Cache PUT  | key={} | cacheSize={}", key, cache.size() + 1);
         cache.put(key, value);
     }
 
     public void invalidate() {
-        LOG.info("Cache INVALIDATED - clearing all {} entries", cache.size());
+        LOG.debug("Cache INVALIDATED | очищено записей={}", cache.size());
         cache.clear();
     }
 }
