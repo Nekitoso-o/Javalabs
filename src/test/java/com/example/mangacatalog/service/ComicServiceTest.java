@@ -401,20 +401,16 @@ class ComicServiceTest {
     }
 
     @Test
-    @DisplayName("create — null genreIds — сохраняется с пустыми жанрами")
-    void create_nullGenreIds() {
+    @DisplayName("create — пустой genreIds — ValidationException")
+    void create_emptyGenreIds() {
         ComicRequest request = new ComicRequest(
-            "Берсерк", 1989, 1L, 1L, null);
-        when(authorRepository.existsById(1L)).thenReturn(true);
-        when(authorRepository.getReferenceById(1L)).thenReturn(testAuthor);
-        when(publisherRepository.existsById(1L)).thenReturn(true);
-        when(publisherRepository.getReferenceById(1L)).thenReturn(testPublisher);
-        when(comicRepository.save(any(Comic.class))).thenReturn(testComic);
+            "Берсерк", 1989, 1L, 1L, Collections.emptySet());
 
-        ComicDto result = comicService.create(request);
+        ValidationException ex = assertThrows(ValidationException.class,
+            () -> comicService.create(request));
 
-        assertNotNull(result);
-        verify(comicRepository).save(any(Comic.class));
+        assertTrue(ex.getErrors().containsKey("genreIds"));
+        verify(comicRepository, never()).save(any());
     }
 
     @Test
@@ -631,10 +627,10 @@ class ComicServiceTest {
     // ─── patch ────────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("patch — все поля null, ничего не меняется")
+    @DisplayName("patch — только title, остальные поля null")
     void patch_allNull() {
         ComicPatchRequest request = new ComicPatchRequest(
-            null, null, null, null, null);
+            "Берсерк", null, null, null, null);
 
         when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
         when(comicRepository.save(any(Comic.class))).thenReturn(testComic);
