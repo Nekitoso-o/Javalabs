@@ -46,14 +46,12 @@ class ComicServiceTest {
     @Mock
     private GenreRepository genreRepository;
 
-    // Реальный Validator через Hibernate — Path нельзя мокать на Java 25
-    private Validator validator;
-
     private final ApiCacheManager cacheManager = new ApiCacheManager();
     private final AuthorMapper authorMapper = new AuthorMapper();
     private final PublisherMapper publisherMapper = new PublisherMapper();
     private final GenreMapper genreMapper = new GenreMapper();
     private ComicMapper comicMapper;
+    private Validator validator;
     private ComicService comicService;
 
     private Author testAuthor;
@@ -253,18 +251,19 @@ class ComicServiceTest {
     }
 
     @Test
-    @DisplayName("searchComplex — Native, с данными автора и жанров")
+    @DisplayName("searchComplex — Native, с данными")
     void searchComplex_native() {
-        ComicNativeProjection proj = mock(ComicNativeProjection.class);
-        when(proj.getId()).thenReturn(1L);
-        when(proj.getTitle()).thenReturn("Берсерк");
-        when(proj.getReleaseYear()).thenReturn(1989);
-        when(proj.getAuthorId()).thenReturn(1L);
-        when(proj.getAuthorName()).thenReturn("Кэнтаро Миура");
-        when(proj.getPublisherId()).thenReturn(1L);
-        when(proj.getPublisherName()).thenReturn("Hakusensha");
-        when(proj.getGenreIds()).thenReturn("1");
-        when(proj.getGenreNames()).thenReturn("Тёмное фэнтези");
+        ComicNativeProjection proj = new ComicNativeProjection() {
+            @Override public Long getId() { return 1L; }
+            @Override public String getTitle() { return "Берсерк"; }
+            @Override public Integer getReleaseYear() { return 1989; }
+            @Override public Long getAuthorId() { return 1L; }
+            @Override public String getAuthorName() { return "Кэнтаро Миура"; }
+            @Override public Long getPublisherId() { return 1L; }
+            @Override public String getPublisherName() { return "Hakusensha"; }
+            @Override public String getGenreIds() { return "1"; }
+            @Override public String getGenreNames() { return "Тёмное фэнтези"; }
+        };
 
         when(comicRepository.findByGenreAndYearNative(
             eq("Тёмное фэнтези"), eq(1989), any(Pageable.class)))
@@ -281,10 +280,8 @@ class ComicServiceTest {
     }
 
     @Test
-    @DisplayName("searchComplex — Native, null автор/издатель/жанры")
+    @DisplayName("searchComplex — Native, null поля")
     void searchComplex_native_nullFields() {
-        // Используем реальный анонимный класс вместо mock(ComicNativeProjection.class)
-        // чтобы избежать UnnecessaryStubbingException и проблем с Java 25
         ComicNativeProjection proj = new ComicNativeProjection() {
             @Override public Long getId() { return 2L; }
             @Override public String getTitle() { return "Без данных"; }
@@ -314,10 +311,8 @@ class ComicServiceTest {
     @Test
     @DisplayName("create — успех")
     void create_success() {
-        // Валидный запрос — реальный validator не выдаст ошибок
         ComicRequest request = new ComicRequest(
             "Берсерк", 1989, 1L, 1L, Set.of(1L));
-
         when(authorRepository.existsById(1L)).thenReturn(true);
         when(authorRepository.getReferenceById(1L)).thenReturn(testAuthor);
         when(publisherRepository.existsById(1L)).thenReturn(true);
@@ -337,7 +332,6 @@ class ComicServiceTest {
     void create_authorNotFound() {
         ComicRequest request = new ComicRequest(
             "Берсерк", 1989, 99L, 1L, Set.of(1L));
-
         when(authorRepository.existsById(99L)).thenReturn(false);
         when(publisherRepository.existsById(1L)).thenReturn(true);
         when(publisherRepository.getReferenceById(1L)).thenReturn(testPublisher);
@@ -345,7 +339,9 @@ class ComicServiceTest {
 
         ValidationException ex = assertThrows(ValidationException.class,
             () -> comicService.create(request));
+
         assertTrue(ex.getErrors().containsKey("authorId"));
+        verify(comicRepository, never()).save(any());
     }
 
     @Test
@@ -353,7 +349,6 @@ class ComicServiceTest {
     void create_publisherNotFound() {
         ComicRequest request = new ComicRequest(
             "Берсерк", 1989, 1L, 99L, Set.of(1L));
-
         when(authorRepository.existsById(1L)).thenReturn(true);
         when(authorRepository.getReferenceById(1L)).thenReturn(testAuthor);
         when(publisherRepository.existsById(99L)).thenReturn(false);
@@ -361,7 +356,9 @@ class ComicServiceTest {
 
         ValidationException ex = assertThrows(ValidationException.class,
             () -> comicService.create(request));
+
         assertTrue(ex.getErrors().containsKey("publisherId"));
+        verify(comicRepository, never()).save(any());
     }
 
     @Test
@@ -369,7 +366,6 @@ class ComicServiceTest {
     void create_genreNotFound() {
         ComicRequest request = new ComicRequest(
             "Берсерк", 1989, 1L, 1L, Set.of(99L));
-
         when(authorRepository.existsById(1L)).thenReturn(true);
         when(authorRepository.getReferenceById(1L)).thenReturn(testAuthor);
         when(publisherRepository.existsById(1L)).thenReturn(true);
@@ -378,30 +374,33 @@ class ComicServiceTest {
 
         ValidationException ex = assertThrows(ValidationException.class,
             () -> comicService.create(request));
+
         assertTrue(ex.getErrors().containsKey("genreIds"));
+        verify(comicRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("create — пустое название — ValidationException от аннотаций")
-    void create_annotationValidation_blankTitle() {
-        // Реальный Validator сработает на @NotBlank
+    @DisplayName("create — пустое название — ValidationException")
+    void create_blankTitle() {
         ComicRequest request = new ComicRequest(
             "", 1989, 1L, 1L, Set.of(1L));
 
         ValidationException ex = assertThrows(ValidationException.class,
             () -> comicService.create(request));
+
         assertTrue(ex.getErrors().containsKey("title"));
         verify(comicRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("create — null год — ValidationException от аннотаций")
-    void create_annotationValidation_nullYear() {
+    @DisplayName("create — null год — ValidationException")
+    void create_nullYear() {
         ComicRequest request = new ComicRequest(
             "Берсерк", null, 1L, 1L, Set.of(1L));
 
         ValidationException ex = assertThrows(ValidationException.class,
             () -> comicService.create(request));
+
         assertTrue(ex.getErrors().containsKey("releaseYear"));
         verify(comicRepository, never()).save(any());
     }
@@ -465,6 +464,7 @@ class ComicServiceTest {
 
         assertThrows(ResourceNotFoundException.class,
             () -> comicService.delete(99L));
+
         verify(comicRepository, never()).deleteById(any());
     }
 
@@ -497,7 +497,6 @@ class ComicServiceTest {
         Author newAuthor = new Author();
         newAuthor.setId(2L);
         newAuthor.setName("Другой Автор");
-
         ComicPatchRequest request = new ComicPatchRequest(
             "Берсерк", null, 2L, null, null);
         Comic patched = new Comic();
@@ -524,7 +523,6 @@ class ComicServiceTest {
         Genre newGenre = new Genre();
         newGenre.setId(2L);
         newGenre.setName("Экшн");
-
         ComicPatchRequest request = new ComicPatchRequest(
             "Берсерк", null, null, null, Set.of(2L));
         Comic patched = new Comic();
@@ -541,8 +539,7 @@ class ComicServiceTest {
 
         ComicDto result = comicService.patch(1L, request);
 
-        assertTrue(result.genres().stream()
-            .anyMatch(g -> g.name().equals("Экшн")));
+        assertTrue(result.genres().stream().anyMatch(g -> g.name().equals("Экшн")));
     }
 
     @Test
@@ -561,12 +558,12 @@ class ComicServiceTest {
     void patch_authorNotFound() {
         ComicPatchRequest request = new ComicPatchRequest(
             "Берсерк", null, 99L, null, null);
-
         when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
         when(authorRepository.existsById(99L)).thenReturn(false);
 
         ValidationException ex = assertThrows(ValidationException.class,
             () -> comicService.patch(1L, request));
+
         assertTrue(ex.getErrors().containsKey("authorId"));
     }
 }

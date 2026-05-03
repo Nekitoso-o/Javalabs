@@ -86,13 +86,13 @@ class ComicBulkServiceTest {
     void createBulk_singleComic_success() {
         ComicRequest request = new ComicRequest(
             "Берсерк", 1989, 1L, 1L, Set.of(1L));
-
         when(authorRepository.findById(1L)).thenReturn(Optional.of(testAuthor));
         when(publisherRepository.findById(1L)).thenReturn(Optional.of(testPublisher));
         when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(testGenre));
         when(comicRepository.save(any(Comic.class))).thenReturn(savedComic);
 
-        BulkComicResult result = comicBulkService.createBulk(List.of(request));
+        List<ComicRequest> requests = List.of(request);
+        BulkComicResult result = comicBulkService.createBulk(requests);
 
         assertNotNull(result);
         assertEquals(1, result.successCount());
@@ -107,7 +107,6 @@ class ComicBulkServiceTest {
     void createBulk_multipleComics_success() {
         ComicRequest req1 = new ComicRequest("Берсерк", 1989, 1L, 1L, Set.of(1L));
         ComicRequest req2 = new ComicRequest("One Piece", 1997, 1L, 1L, Set.of(1L));
-
         Comic saved2 = new Comic();
         saved2.setId(11L);
         saved2.setTitle("One Piece");
@@ -123,7 +122,8 @@ class ComicBulkServiceTest {
             .thenReturn(savedComic)
             .thenReturn(saved2);
 
-        BulkComicResult result = comicBulkService.createBulk(List.of(req1, req2));
+        List<ComicRequest> requests = List.of(req1, req2);
+        BulkComicResult result = comicBulkService.createBulk(requests);
 
         assertEquals(2, result.successCount());
         assertEquals(2, result.created().size());
@@ -137,8 +137,9 @@ class ComicBulkServiceTest {
             "Тест", 2020, 99L, 1L, Set.of(1L));
         when(authorRepository.findById(99L)).thenReturn(Optional.empty());
 
+        List<ComicRequest> requests = List.of(request);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> comicBulkService.createBulk(List.of(request)));
+            () -> comicBulkService.createBulk(requests));
 
         assertTrue(ex.getMessage().contains("Элемент [0]"));
         verify(comicRepository, never()).save(any());
@@ -149,12 +150,12 @@ class ComicBulkServiceTest {
     void createBulk_publisherNotFound() {
         ComicRequest request = new ComicRequest(
             "Тест", 2020, 1L, 99L, Set.of(1L));
-
         when(authorRepository.findById(1L)).thenReturn(Optional.of(testAuthor));
         when(publisherRepository.findById(99L)).thenReturn(Optional.empty());
 
+        List<ComicRequest> requests = List.of(request);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> comicBulkService.createBulk(List.of(request)));
+            () -> comicBulkService.createBulk(requests));
 
         assertTrue(ex.getMessage().contains("Элемент [0]"));
         verify(comicRepository, never()).save(any());
@@ -165,13 +166,13 @@ class ComicBulkServiceTest {
     void createBulk_genreNotFound() {
         ComicRequest request = new ComicRequest(
             "Тест", 2020, 1L, 1L, Set.of(99L));
-
         when(authorRepository.findById(1L)).thenReturn(Optional.of(testAuthor));
         when(publisherRepository.findById(1L)).thenReturn(Optional.of(testPublisher));
         when(genreRepository.findAllById(Set.of(99L))).thenReturn(Collections.emptyList());
 
+        List<ComicRequest> requests = List.of(request);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> comicBulkService.createBulk(List.of(request)));
+            () -> comicBulkService.createBulk(requests));
 
         assertTrue(ex.getMessage().contains("Элемент [0]"));
         verify(comicRepository, never()).save(any());
@@ -182,12 +183,12 @@ class ComicBulkServiceTest {
     void createBulk_emptyGenres() {
         ComicRequest request = new ComicRequest(
             "Тест", 2020, 1L, 1L, Collections.emptySet());
-
         when(authorRepository.findById(1L)).thenReturn(Optional.of(testAuthor));
         when(publisherRepository.findById(1L)).thenReturn(Optional.of(testPublisher));
 
+        List<ComicRequest> requests = List.of(request);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> comicBulkService.createBulk(List.of(request)));
+            () -> comicBulkService.createBulk(requests));
 
         assertTrue(ex.getMessage().contains("список жанров не может быть пустым"));
         verify(comicRepository, never()).save(any());
@@ -198,32 +199,32 @@ class ComicBulkServiceTest {
     void createBulk_partialGenresFound() {
         ComicRequest request = new ComicRequest(
             "Тест", 2020, 1L, 1L, Set.of(1L, 2L));
-
         when(authorRepository.findById(1L)).thenReturn(Optional.of(testAuthor));
         when(publisherRepository.findById(1L)).thenReturn(Optional.of(testPublisher));
         when(genreRepository.findAllById(Set.of(1L, 2L))).thenReturn(List.of(testGenre));
 
+        List<ComicRequest> requests = List.of(request);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> comicBulkService.createBulk(List.of(request)));
+            () -> comicBulkService.createBulk(requests));
 
         assertTrue(ex.getMessage().contains("не найдены"));
         verify(comicRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("createBulk — ошибка на втором элементе содержит индекс [1]")
-    void createBulk_secondElementFails_indexInMessage() {
+    @DisplayName("createBulk — ошибка на втором элементе, индекс [1] в сообщении")
+    void createBulk_secondElementFails() {
         ComicRequest req1 = new ComicRequest("Берсерк", 1989, 1L, 1L, Set.of(1L));
         ComicRequest req2 = new ComicRequest("Тест", 2020, 99L, 1L, Set.of(1L));
-
         when(authorRepository.findById(1L)).thenReturn(Optional.of(testAuthor));
         when(authorRepository.findById(99L)).thenReturn(Optional.empty());
         when(publisherRepository.findById(1L)).thenReturn(Optional.of(testPublisher));
         when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(testGenre));
         when(comicRepository.save(any(Comic.class))).thenReturn(savedComic);
 
+        List<ComicRequest> requests = List.of(req1, req2);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> comicBulkService.createBulk(List.of(req1, req2)));
+            () -> comicBulkService.createBulk(requests));
 
         assertTrue(ex.getMessage().contains("Элемент [1]"));
     }

@@ -68,9 +68,11 @@ class ReviewServiceTest {
         List<ReviewDto> result = reviewService.getAllReviews();
 
         assertEquals(1, result.size());
+        assertEquals(1L, result.get(0).id());
         assertEquals("Отличный комикс!", result.get(0).text());
         assertEquals(9, result.get(0).rating());
         assertEquals(1L, result.get(0).comicId());
+        verify(reviewRepository, times(1)).findAll();
     }
 
     @Test
@@ -157,7 +159,6 @@ class ReviewServiceTest {
     @DisplayName("addReviewToComic — успех")
     void addReviewToComic_success() {
         ReviewRequest request = new ReviewRequest("Шедевр!", 9, 1L);
-
         when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
         when(reviewRepository.save(any(Review.class))).thenReturn(testReview);
 
@@ -190,7 +191,6 @@ class ReviewServiceTest {
         updated.setText("Обновлённый текст");
         updated.setRating(7);
         updated.setComic(testComic);
-
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(testReview));
         when(reviewRepository.save(any(Review.class))).thenReturn(updated);
 
@@ -242,7 +242,6 @@ class ReviewServiceTest {
         patched.setText("Новый текст");
         patched.setRating(3);
         patched.setComic(testComic);
-
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(testReview));
         when(reviewRepository.save(any(Review.class))).thenReturn(patched);
 
@@ -258,13 +257,11 @@ class ReviewServiceTest {
         Comic newComic = new Comic();
         newComic.setId(2L);
         ReviewPatchRequest request = new ReviewPatchRequest(null, null, 2L);
-
         Review patched = new Review();
         patched.setId(1L);
         patched.setText("Отличный комикс!");
         patched.setRating(9);
         patched.setComic(newComic);
-
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(testReview));
         when(comicRepository.findById(2L)).thenReturn(Optional.of(newComic));
         when(reviewRepository.save(any(Review.class))).thenReturn(patched);

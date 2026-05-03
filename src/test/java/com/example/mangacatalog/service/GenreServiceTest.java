@@ -55,6 +55,7 @@ class GenreServiceTest {
         List<GenreDto> result = genreService.getAll();
 
         assertEquals(1, result.size());
+        assertEquals(1L, result.get(0).id());
         assertEquals("Сёнэн", result.get(0).name());
         verify(repository, times(1)).findAll();
     }
@@ -121,7 +122,6 @@ class GenreServiceTest {
         Genre saved = new Genre();
         saved.setId(2L);
         saved.setName("Сэйнэн");
-
         when(repository.save(any(Genre.class))).thenReturn(saved);
 
         GenreDto result = genreService.create(request);
@@ -135,16 +135,16 @@ class GenreServiceTest {
     @DisplayName("create — кэш инвалидируется")
     void create_invalidatesCache() {
         when(repository.findAll()).thenReturn(List.of(testGenre));
-        genreService.getAll(); // заполняем кэш
+        genreService.getAll();
 
         Genre saved = new Genre();
         saved.setId(2L);
         saved.setName("Сэйнэн");
         when(repository.save(any(Genre.class))).thenReturn(saved);
-        genreService.create(new GenreRequest("Сэйнэн")); // инвалидирует кэш
+        genreService.create(new GenreRequest("Сэйнэн"));
 
         when(repository.findAll()).thenReturn(List.of(testGenre, saved));
-        genreService.getAll(); // снова идёт в БД
+        genreService.getAll();
         verify(repository, times(2)).findAll();
     }
 
@@ -157,22 +157,23 @@ class GenreServiceTest {
         Genre updated = new Genre();
         updated.setId(1L);
         updated.setName("Сёдзё");
-
         when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
         when(repository.save(any(Genre.class))).thenReturn(updated);
 
         GenreDto result = genreService.update(1L, request);
 
         assertEquals("Сёдзё", result.name());
+        verify(repository).save(any(Genre.class));
     }
 
     @Test
     @DisplayName("update — жанр не найден")
     void update_notFound() {
+        GenreRequest request = new GenreRequest("Имя");
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-            () -> genreService.update(99L, new GenreRequest("Имя")));
+            () -> genreService.update(99L, request));
     }
 
     // ─── delete ───────────────────────────────────────────────────────────────
@@ -183,7 +184,6 @@ class GenreServiceTest {
         Comic comic = new Comic();
         comic.getGenres().add(testGenre);
         testGenre.getComics().add(comic);
-
         when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
 
         genreService.delete(1L);

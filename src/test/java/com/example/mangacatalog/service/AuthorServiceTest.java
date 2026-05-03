@@ -29,7 +29,6 @@ class AuthorServiceTest {
     @Mock
     private AuthorRepository repository;
 
-    // Реальные объекты вместо моков — Java 25 не позволяет мокать их
     private final AuthorMapper mapper = new AuthorMapper();
     private final ApiCacheManager cacheManager = new ApiCacheManager();
 
@@ -39,7 +38,6 @@ class AuthorServiceTest {
     @BeforeEach
     void setUp() {
         authorService = new AuthorService(repository, mapper, cacheManager);
-        // Очищаем кэш перед каждым тестом
         cacheManager.invalidate();
 
         testAuthor = new Author();
@@ -50,28 +48,27 @@ class AuthorServiceTest {
     // ─── getAll ───────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getAll — кэш пуст, запрос к БД, результат кэшируется")
-    void getAll_cacheMiss_queriesDb() {
+    @DisplayName("getAll — кэш пуст, запрос к БД")
+    void getAll_cacheMiss() {
         when(repository.findAll()).thenReturn(List.of(testAuthor));
 
         List<AuthorDto> result = authorService.getAll();
 
         assertNotNull(result);
         assertEquals(1, result.size());
-        assertEquals("Акира Торияма", result.get(0).name());
         assertEquals(1L, result.get(0).id());
+        assertEquals("Акира Торияма", result.get(0).name());
         verify(repository, times(1)).findAll();
     }
 
     @Test
-    @DisplayName("getAll — второй вызов берёт из кэша, БД не вызывается")
+    @DisplayName("getAll — второй вызов берёт из кэша")
     void getAll_secondCall_fromCache() {
         when(repository.findAll()).thenReturn(List.of(testAuthor));
 
-        authorService.getAll(); // первый вызов — идёт в БД
-        authorService.getAll(); // второй вызов — из кэша
+        authorService.getAll();
+        authorService.getAll();
 
-        // findAll должен быть вызван только один раз
         verify(repository, times(1)).findAll();
     }
 
@@ -80,7 +77,9 @@ class AuthorServiceTest {
     void getAll_empty() {
         when(repository.findAll()).thenReturn(Collections.emptyList());
 
-        assertTrue(authorService.getAll().isEmpty());
+        List<AuthorDto> result = authorService.getAll();
+
+        assertTrue(result.isEmpty());
     }
 
     // ─── getById ──────────────────────────────────────────────────────────────
@@ -120,13 +119,8 @@ class AuthorServiceTest {
     // ─── create ───────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("create — успех, кэш инвалидируется")
+    @DisplayName("create — успех")
     void create_success() {
-        // Заполняем кэш
-        when(repository.findAll()).thenReturn(List.of(testAuthor));
-        authorService.getAll();
-
-        // Создаём нового автора
         AuthorRequest request = new AuthorRequest("Масаси Кисимото");
         Author saved = new Author();
         saved.setId(2L);
@@ -138,8 +132,22 @@ class AuthorServiceTest {
         assertNotNull(result);
         assertEquals(2L, result.id());
         assertEquals("Масаси Кисимото", result.name());
+        verify(repository).save(any(Author.class));
+    }
 
-        // После инвалидации кэша следующий getAll должен снова пойти в БД
+    @Test
+    @DisplayName("create — кэш инвалидируется после создания")
+    void create_invalidatesCache() {
+        when(repository.findAll()).thenReturn(List.of(testAuthor));
+        authorService.getAll();
+
+        Author saved = new Author();
+        saved.setId(2L);
+        saved.setName("Масаси Кисимото");
+        when(repository.save(any(Author.class))).thenReturn(saved);
+        AuthorRequest request = new AuthorRequest("Масаси Кисимото");
+        authorService.create(request);
+
         when(repository.findAll()).thenReturn(List.of(testAuthor, saved));
         authorService.getAll();
         verify(repository, times(2)).findAll();
@@ -154,7 +162,6 @@ class AuthorServiceTest {
         Author updated = new Author();
         updated.setId(1L);
         updated.setName("Новое Имя");
-
         when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
         when(repository.save(any(Author.class))).thenReturn(updated);
 
@@ -168,10 +175,11 @@ class AuthorServiceTest {
     @Test
     @DisplayName("update — автор не найден")
     void update_notFound() {
+        AuthorRequest request = new AuthorRequest("Имя");
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-            () -> authorService.update(99L, new AuthorRequest("Имя")));
+            () -> authorService.update(99L, request));
     }
 
     // ─── delete ───────────────────────────────────────────────────────────────
@@ -182,7 +190,6 @@ class AuthorServiceTest {
         Comic comic = new Comic();
         comic.setAuthor(testAuthor);
         testAuthor.getComics().add(comic);
-
         when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
 
         authorService.delete(1L);

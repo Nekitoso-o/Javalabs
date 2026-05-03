@@ -55,6 +55,7 @@ class PublisherServiceTest {
         List<PublisherDto> result = publisherService.getAll();
 
         assertEquals(1, result.size());
+        assertEquals(1L, result.get(0).id());
         assertEquals("Shueisha", result.get(0).name());
         verify(repository, times(1)).findAll();
     }
@@ -121,7 +122,6 @@ class PublisherServiceTest {
         Publisher saved = new Publisher();
         saved.setId(2L);
         saved.setName("Kodansha");
-
         when(repository.save(any(Publisher.class))).thenReturn(saved);
 
         PublisherDto result = publisherService.create(request);
@@ -157,22 +157,23 @@ class PublisherServiceTest {
         Publisher updated = new Publisher();
         updated.setId(1L);
         updated.setName("Viz Media");
-
         when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
         when(repository.save(any(Publisher.class))).thenReturn(updated);
 
         PublisherDto result = publisherService.update(1L, request);
 
         assertEquals("Viz Media", result.name());
+        verify(repository).save(any(Publisher.class));
     }
 
     @Test
     @DisplayName("update — не найден")
     void update_notFound() {
+        PublisherRequest request = new PublisherRequest("Имя");
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-            () -> publisherService.update(99L, new PublisherRequest("Имя")));
+            () -> publisherService.update(99L, request));
     }
 
     // ─── delete ───────────────────────────────────────────────────────────────
@@ -183,7 +184,6 @@ class PublisherServiceTest {
         Comic comic = new Comic();
         comic.setPublisher(testPublisher);
         testPublisher.getComics().add(comic);
-
         when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
 
         publisherService.delete(1L);
