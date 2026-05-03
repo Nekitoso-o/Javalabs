@@ -739,4 +739,42 @@ class ComicServiceTest {
 
         assertTrue(ex.getErrors().containsKey("genreIds"));
     }
+
+    @Test
+    @DisplayName("extractAuthorId — неизвестный тип — возвращает null")
+    void extractAuthorId_unknownType_returnsNull() throws Exception {
+        var method = ComicService.class
+            .getDeclaredMethod("extractAuthorId", Object.class);
+        method.setAccessible(true);
+
+        Object result = method.invoke(comicService, "some_unknown_object");
+
+        assertNull(result);
+    }
+
+    @Test
+    @DisplayName("extractPublisherId — неизвестный тип — возвращает null")
+    void extractPublisherId_unknownType_returnsNull() throws Exception {
+        var method = ComicService.class
+            .getDeclaredMethod("extractPublisherId", Object.class);
+        method.setAccessible(true);
+
+        Object result = method.invoke(comicService, "some_unknown_object");
+
+        assertNull(result);
+    }
+
+    @Test
+    @DisplayName("extractGenreIds — неизвестный тип — возвращает emptySet")
+    void extractGenreIds_unknownType_returnsEmptySet() throws Exception {
+        var method = ComicService.class
+            .getDeclaredMethod("extractGenreIds", Object.class);
+        method.setAccessible(true);
+
+        @SuppressWarnings("unchecked")
+        Set<Long> result = (Set<Long>) method.invoke(comicService, "some_unknown_object");
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
 }
