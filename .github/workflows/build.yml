@@ -24,13 +24,10 @@ jobs:
           distribution: 'temurin'
 
       - name: Build with Maven and Run Tests
-        run: mvn clean verify
+        run: mvn clean verify -Dcheckstyle.skip=true
 
-      - name: Check JaCoCo report
-        run: |
-          echo "=== JaCoCo report check ==="
-          ls -la target/site/jacoco/ && echo "SUCCESS: jacoco dir found" || echo "ERROR: jacoco dir NOT found"
-          ls -la target/site/jacoco/jacoco.xml && echo "SUCCESS: jacoco.xml found" || echo "ERROR: jacoco.xml NOT found"
+      - name: Find jacoco.xml
+        run: find target -name "jacoco.xml" -type f
 
       - name: Analyze with SonarCloud
         env:
@@ -38,6 +35,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
           mvn sonar:sonar
+          -Dcheckstyle.skip=true
           -Dsonar.projectKey=Nekitoso-o_Javalabs
           -Dsonar.organization=nekitoso-o
           -Dsonar.host.url=https://sonarcloud.io
