@@ -1,6 +1,5 @@
 package com.example.mangacatalog.service;
 
-import com.example.mangacatalog.cache.ApiCacheKey;
 import com.example.mangacatalog.cache.ApiCacheManager;
 import com.example.mangacatalog.dto.PublisherDto;
 import com.example.mangacatalog.dto.PublisherRequest;
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -30,57 +28,51 @@ class PublisherServiceTest {
 
     @Mock
     private PublisherRepository repository;
-    @Mock
-    private PublisherMapper mapper;
-    @Mock
-    private ApiCacheManager cacheManager;
 
-    @InjectMocks
+    private final PublisherMapper mapper = new PublisherMapper();
+    private final ApiCacheManager cacheManager = new ApiCacheManager();
+
     private PublisherService publisherService;
-
     private Publisher testPublisher;
-    private PublisherDto testPublisherDto;
 
     @BeforeEach
     void setUp() {
+        publisherService = new PublisherService(repository, mapper, cacheManager);
+        cacheManager.invalidate();
+
         testPublisher = new Publisher();
         testPublisher.setId(1L);
         testPublisher.setName("Shueisha");
-        testPublisherDto = new PublisherDto(1L, "Shueisha");
     }
 
     // ─── getAll ───────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getAll — из кэша")
-    void getAll_fromCache() {
-        List<PublisherDto> cached = List.of(testPublisherDto);
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(cached);
-
-        List<PublisherDto> result = publisherService.getAll();
-
-        assertEquals(cached, result);
-        verify(repository, never()).findAll();
-    }
-
-    @Test
     @DisplayName("getAll — кэш пуст, запрос к БД")
     void getAll_cacheMiss() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(repository.findAll()).thenReturn(List.of(testPublisher));
-        when(mapper.toDto(testPublisher)).thenReturn(testPublisherDto);
 
         List<PublisherDto> result = publisherService.getAll();
 
         assertEquals(1, result.size());
         assertEquals("Shueisha", result.get(0).name());
-        verify(cacheManager).put(any(ApiCacheKey.class), any());
+        verify(repository, times(1)).findAll();
+    }
+
+    @Test
+    @DisplayName("getAll — второй вызов из кэша")
+    void getAll_secondCall_fromCache() {
+        when(repository.findAll()).thenReturn(List.of(testPublisher));
+
+        publisherService.getAll();
+        publisherService.getAll();
+
+        verify(repository, times(1)).findAll();
     }
 
     @Test
     @DisplayName("getAll — пустой список")
     void getAll_empty() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(repository.findAll()).thenReturn(Collections.emptyList());
 
         assertTrue(publisherService.getAll().isEmpty());
@@ -89,34 +81,31 @@ class PublisherServiceTest {
     // ─── getById ──────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getById — из кэша")
-    void getById_fromCache() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(testPublisherDto);
-
-        PublisherDto result = publisherService.getById(1L);
-
-        assertEquals(testPublisherDto, result);
-        verify(repository, never()).findById(any());
-    }
-
-    @Test
-    @DisplayName("getById — кэш пуст, успех")
-    void getById_cacheMiss_success() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
+    @DisplayName("getById — успех")
+    void getById_success() {
         when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
-        when(mapper.toDto(testPublisher)).thenReturn(testPublisherDto);
 
         PublisherDto result = publisherService.getById(1L);
 
         assertNotNull(result);
+        assertEquals(1L, result.id());
         assertEquals("Shueisha", result.name());
-        verify(cacheManager).put(any(ApiCacheKey.class), any());
     }
 
     @Test
-    @DisplayName("getById — издатель не найден")
+    @DisplayName("getById — второй вызов из кэша")
+    void getById_secondCall_fromCache() {
+        when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
+
+        publisherService.getById(1L);
+        publisherService.getById(1L);
+
+        verify(repository, times(1)).findById(1L);
+    }
+
+    @Test
+    @DisplayName("getById — не найден")
     void getById_notFound() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
@@ -132,16 +121,31 @@ class PublisherServiceTest {
         Publisher saved = new Publisher();
         saved.setId(2L);
         saved.setName("Kodansha");
-        PublisherDto savedDto = new PublisherDto(2L, "Kodansha");
 
         when(repository.save(any(Publisher.class))).thenReturn(saved);
-        when(mapper.toDto(saved)).thenReturn(savedDto);
 
         PublisherDto result = publisherService.create(request);
 
         assertNotNull(result);
+        assertEquals(2L, result.id());
         assertEquals("Kodansha", result.name());
-        verify(cacheManager).invalidate();
+    }
+
+    @Test
+    @DisplayName("create — кэш инвалидируется")
+    void create_invalidatesCache() {
+        when(repository.findAll()).thenReturn(List.of(testPublisher));
+        publisherService.getAll();
+
+        Publisher saved = new Publisher();
+        saved.setId(2L);
+        saved.setName("Kodansha");
+        when(repository.save(any(Publisher.class))).thenReturn(saved);
+        publisherService.create(new PublisherRequest("Kodansha"));
+
+        when(repository.findAll()).thenReturn(List.of(testPublisher, saved));
+        publisherService.getAll();
+        verify(repository, times(2)).findAll();
     }
 
     // ─── update ───────────────────────────────────────────────────────────────
@@ -150,20 +154,20 @@ class PublisherServiceTest {
     @DisplayName("update — успех")
     void update_success() {
         PublisherRequest request = new PublisherRequest("Viz Media");
-        PublisherDto updatedDto = new PublisherDto(1L, "Viz Media");
+        Publisher updated = new Publisher();
+        updated.setId(1L);
+        updated.setName("Viz Media");
 
         when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
-        when(repository.save(any(Publisher.class))).thenReturn(testPublisher);
-        when(mapper.toDto(testPublisher)).thenReturn(updatedDto);
+        when(repository.save(any(Publisher.class))).thenReturn(updated);
 
         PublisherDto result = publisherService.update(1L, request);
 
         assertEquals("Viz Media", result.name());
-        verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("update — издатель не найден")
+    @DisplayName("update — не найден")
     void update_notFound() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
@@ -176,7 +180,6 @@ class PublisherServiceTest {
     @Test
     @DisplayName("delete — успех, комиксы обнуляются")
     void delete_success_withComics() {
-        // Publisher.comics — без сеттера, заполняем через getComics().add()
         Comic comic = new Comic();
         comic.setPublisher(testPublisher);
         testPublisher.getComics().add(comic);
@@ -187,22 +190,20 @@ class PublisherServiceTest {
 
         assertNull(comic.getPublisher());
         verify(repository).delete(testPublisher);
-        verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("delete — издатель без комиксов")
+    @DisplayName("delete — успех, нет комиксов")
     void delete_success_noComics() {
         when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
 
         publisherService.delete(1L);
 
         verify(repository).delete(testPublisher);
-        verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("delete — издатель не найден")
+    @DisplayName("delete — не найден")
     void delete_notFound() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 

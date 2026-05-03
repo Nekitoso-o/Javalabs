@@ -1,6 +1,5 @@
 package com.example.mangacatalog.service;
 
-import com.example.mangacatalog.cache.ApiCacheKey;
 import com.example.mangacatalog.cache.ApiCacheManager;
 import com.example.mangacatalog.dto.GenreDto;
 import com.example.mangacatalog.dto.GenreRequest;
@@ -13,12 +12,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,57 +28,51 @@ class GenreServiceTest {
 
     @Mock
     private GenreRepository repository;
-    @Mock
-    private GenreMapper mapper;
-    @Mock
-    private ApiCacheManager cacheManager;
 
-    @InjectMocks
+    private final GenreMapper mapper = new GenreMapper();
+    private final ApiCacheManager cacheManager = new ApiCacheManager();
+
     private GenreService genreService;
-
     private Genre testGenre;
-    private GenreDto testGenreDto;
 
     @BeforeEach
     void setUp() {
+        genreService = new GenreService(repository, mapper, cacheManager);
+        cacheManager.invalidate();
+
         testGenre = new Genre();
         testGenre.setId(1L);
         testGenre.setName("Сёнэн");
-        testGenreDto = new GenreDto(1L, "Сёнэн");
     }
 
     // ─── getAll ───────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getAll — из кэша")
-    void getAll_fromCache() {
-        List<GenreDto> cached = List.of(testGenreDto);
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(cached);
-
-        List<GenreDto> result = genreService.getAll();
-
-        assertEquals(cached, result);
-        verify(repository, never()).findAll();
-    }
-
-    @Test
     @DisplayName("getAll — кэш пуст, запрос к БД")
     void getAll_cacheMiss() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(repository.findAll()).thenReturn(List.of(testGenre));
-        when(mapper.toDto(testGenre)).thenReturn(testGenreDto);
 
         List<GenreDto> result = genreService.getAll();
 
         assertEquals(1, result.size());
         assertEquals("Сёнэн", result.get(0).name());
-        verify(cacheManager).put(any(ApiCacheKey.class), any());
+        verify(repository, times(1)).findAll();
+    }
+
+    @Test
+    @DisplayName("getAll — второй вызов из кэша")
+    void getAll_secondCall_fromCache() {
+        when(repository.findAll()).thenReturn(List.of(testGenre));
+
+        genreService.getAll();
+        genreService.getAll();
+
+        verify(repository, times(1)).findAll();
     }
 
     @Test
     @DisplayName("getAll — пустой список")
     void getAll_empty() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(repository.findAll()).thenReturn(Collections.emptyList());
 
         assertTrue(genreService.getAll().isEmpty());
@@ -90,34 +81,31 @@ class GenreServiceTest {
     // ─── getById ──────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getById — из кэша")
-    void getById_fromCache() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(testGenreDto);
-
-        GenreDto result = genreService.getById(1L);
-
-        assertEquals(testGenreDto, result);
-        verify(repository, never()).findById(any());
-    }
-
-    @Test
-    @DisplayName("getById — кэш пуст, успех")
-    void getById_cacheMiss_success() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
+    @DisplayName("getById — успех")
+    void getById_success() {
         when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
-        when(mapper.toDto(testGenre)).thenReturn(testGenreDto);
 
         GenreDto result = genreService.getById(1L);
 
         assertNotNull(result);
+        assertEquals(1L, result.id());
         assertEquals("Сёнэн", result.name());
-        verify(cacheManager).put(any(ApiCacheKey.class), any());
+    }
+
+    @Test
+    @DisplayName("getById — второй вызов из кэша")
+    void getById_secondCall_fromCache() {
+        when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
+
+        genreService.getById(1L);
+        genreService.getById(1L);
+
+        verify(repository, times(1)).findById(1L);
     }
 
     @Test
     @DisplayName("getById — жанр не найден")
     void getById_notFound() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
@@ -133,16 +121,31 @@ class GenreServiceTest {
         Genre saved = new Genre();
         saved.setId(2L);
         saved.setName("Сэйнэн");
-        GenreDto savedDto = new GenreDto(2L, "Сэйнэн");
 
         when(repository.save(any(Genre.class))).thenReturn(saved);
-        when(mapper.toDto(saved)).thenReturn(savedDto);
 
         GenreDto result = genreService.create(request);
 
         assertNotNull(result);
+        assertEquals(2L, result.id());
         assertEquals("Сэйнэн", result.name());
-        verify(cacheManager).invalidate();
+    }
+
+    @Test
+    @DisplayName("create — кэш инвалидируется")
+    void create_invalidatesCache() {
+        when(repository.findAll()).thenReturn(List.of(testGenre));
+        genreService.getAll(); // заполняем кэш
+
+        Genre saved = new Genre();
+        saved.setId(2L);
+        saved.setName("Сэйнэн");
+        when(repository.save(any(Genre.class))).thenReturn(saved);
+        genreService.create(new GenreRequest("Сэйнэн")); // инвалидирует кэш
+
+        when(repository.findAll()).thenReturn(List.of(testGenre, saved));
+        genreService.getAll(); // снова идёт в БД
+        verify(repository, times(2)).findAll();
     }
 
     // ─── update ───────────────────────────────────────────────────────────────
@@ -151,16 +154,16 @@ class GenreServiceTest {
     @DisplayName("update — успех")
     void update_success() {
         GenreRequest request = new GenreRequest("Сёдзё");
-        GenreDto updatedDto = new GenreDto(1L, "Сёдзё");
+        Genre updated = new Genre();
+        updated.setId(1L);
+        updated.setName("Сёдзё");
 
         when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
-        when(repository.save(any(Genre.class))).thenReturn(testGenre);
-        when(mapper.toDto(testGenre)).thenReturn(updatedDto);
+        when(repository.save(any(Genre.class))).thenReturn(updated);
 
         GenreDto result = genreService.update(1L, request);
 
         assertEquals("Сёдзё", result.name());
-        verify(cacheManager).invalidate();
     }
 
     @Test
@@ -177,9 +180,7 @@ class GenreServiceTest {
     @Test
     @DisplayName("delete — успех, комикс отвязывается от жанра")
     void delete_success_withComics() {
-        // Genre.comics — без сеттера, заполняем через getComics().add()
         Comic comic = new Comic();
-        // genres у Comic — HashSet, инициализирован в сущности
         comic.getGenres().add(testGenre);
         testGenre.getComics().add(comic);
 
@@ -189,19 +190,16 @@ class GenreServiceTest {
 
         assertFalse(comic.getGenres().contains(testGenre));
         verify(repository).delete(testGenre);
-        verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("delete — успех, у жанра нет комиксов")
+    @DisplayName("delete — успех, нет комиксов")
     void delete_success_noComics() {
-        // getComics() вернёт пустой список (инициализирован в Genre)
         when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
 
         genreService.delete(1L);
 
         verify(repository).delete(testGenre);
-        verify(cacheManager).invalidate();
     }
 
     @Test

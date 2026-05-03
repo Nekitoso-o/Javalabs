@@ -1,6 +1,5 @@
 package com.example.mangacatalog.service;
 
-import com.example.mangacatalog.cache.ApiCacheKey;
 import com.example.mangacatalog.cache.ApiCacheManager;
 import com.example.mangacatalog.dto.ReviewDto;
 import com.example.mangacatalog.dto.ReviewPatchRequest;
@@ -15,7 +14,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -32,22 +30,23 @@ class ReviewServiceTest {
 
     @Mock
     private ReviewRepository reviewRepository;
+
     @Mock
     private ComicRepository comicRepository;
-    @Mock
-    private ReviewMapper reviewMapper;
-    @Mock
-    private ApiCacheManager cacheManager;
 
-    @InjectMocks
+    private final ReviewMapper reviewMapper = new ReviewMapper();
+    private final ApiCacheManager cacheManager = new ApiCacheManager();
+
     private ReviewService reviewService;
-
-    private Review testReview;
-    private ReviewDto testReviewDto;
     private Comic testComic;
+    private Review testReview;
 
     @BeforeEach
     void setUp() {
+        reviewService = new ReviewService(
+            reviewRepository, comicRepository, reviewMapper, cacheManager);
+        cacheManager.invalidate();
+
         testComic = new Comic();
         testComic.setId(1L);
         testComic.setTitle("One Piece");
@@ -57,41 +56,37 @@ class ReviewServiceTest {
         testReview.setText("Отличный комикс!");
         testReview.setRating(9);
         testReview.setComic(testComic);
-
-        testReviewDto = new ReviewDto(1L, "Отличный комикс!", 9, 1L);
     }
 
     // ─── getAllReviews ────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getAllReviews — из кэша")
-    void getAllReviews_fromCache() {
-        List<ReviewDto> cached = List.of(testReviewDto);
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(cached);
-
-        List<ReviewDto> result = reviewService.getAllReviews();
-
-        assertEquals(cached, result);
-        verify(reviewRepository, never()).findAll();
-    }
-
-    @Test
     @DisplayName("getAllReviews — кэш пуст, запрос к БД")
     void getAllReviews_cacheMiss() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(reviewRepository.findAll()).thenReturn(List.of(testReview));
-        when(reviewMapper.toDto(testReview)).thenReturn(testReviewDto);
 
         List<ReviewDto> result = reviewService.getAllReviews();
 
         assertEquals(1, result.size());
-        verify(cacheManager).put(any(ApiCacheKey.class), any());
+        assertEquals("Отличный комикс!", result.get(0).text());
+        assertEquals(9, result.get(0).rating());
+        assertEquals(1L, result.get(0).comicId());
+    }
+
+    @Test
+    @DisplayName("getAllReviews — второй вызов из кэша")
+    void getAllReviews_secondCall_fromCache() {
+        when(reviewRepository.findAll()).thenReturn(List.of(testReview));
+
+        reviewService.getAllReviews();
+        reviewService.getAllReviews();
+
+        verify(reviewRepository, times(1)).findAll();
     }
 
     @Test
     @DisplayName("getAllReviews — пустой список")
     void getAllReviews_empty() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(reviewRepository.findAll()).thenReturn(Collections.emptyList());
 
         assertTrue(reviewService.getAllReviews().isEmpty());
@@ -100,34 +95,32 @@ class ReviewServiceTest {
     // ─── getById ──────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getById — из кэша")
-    void getById_fromCache() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(testReviewDto);
-
-        ReviewDto result = reviewService.getById(1L);
-
-        assertEquals(testReviewDto, result);
-        verify(reviewRepository, never()).findById(any());
-    }
-
-    @Test
-    @DisplayName("getById — кэш пуст, успех")
-    void getById_cacheMiss_success() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
+    @DisplayName("getById — успех")
+    void getById_success() {
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(testReview));
-        when(reviewMapper.toDto(testReview)).thenReturn(testReviewDto);
 
         ReviewDto result = reviewService.getById(1L);
 
         assertNotNull(result);
+        assertEquals(1L, result.id());
         assertEquals(9, result.rating());
-        verify(cacheManager).put(any(ApiCacheKey.class), any());
+        assertEquals(1L, result.comicId());
     }
 
     @Test
-    @DisplayName("getById — отзыв не найден")
+    @DisplayName("getById — второй вызов из кэша")
+    void getById_secondCall_fromCache() {
+        when(reviewRepository.findById(1L)).thenReturn(Optional.of(testReview));
+
+        reviewService.getById(1L);
+        reviewService.getById(1L);
+
+        verify(reviewRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    @DisplayName("getById — не найден")
     void getById_notFound() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
         when(reviewRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
@@ -137,28 +130,25 @@ class ReviewServiceTest {
     // ─── getReviewsByComicId ──────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getReviewsByComicId — из кэша")
-    void getReviewsByComicId_fromCache() {
-        List<ReviewDto> cached = List.of(testReviewDto);
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(cached);
-
-        List<ReviewDto> result = reviewService.getReviewsByComicId(1L);
-
-        assertEquals(cached, result);
-        verify(reviewRepository, never()).findByComicId(any());
-    }
-
-    @Test
-    @DisplayName("getReviewsByComicId — кэш пуст, запрос к БД")
-    void getReviewsByComicId_cacheMiss() {
-        when(cacheManager.get(any(ApiCacheKey.class))).thenReturn(null);
+    @DisplayName("getReviewsByComicId — успех")
+    void getReviewsByComicId_success() {
         when(reviewRepository.findByComicId(1L)).thenReturn(List.of(testReview));
-        when(reviewMapper.toDto(testReview)).thenReturn(testReviewDto);
 
         List<ReviewDto> result = reviewService.getReviewsByComicId(1L);
 
         assertEquals(1, result.size());
-        verify(cacheManager).put(any(ApiCacheKey.class), any());
+        assertEquals(1L, result.get(0).comicId());
+    }
+
+    @Test
+    @DisplayName("getReviewsByComicId — второй вызов из кэша")
+    void getReviewsByComicId_secondCall_fromCache() {
+        when(reviewRepository.findByComicId(1L)).thenReturn(List.of(testReview));
+
+        reviewService.getReviewsByComicId(1L);
+        reviewService.getReviewsByComicId(1L);
+
+        verify(reviewRepository, times(1)).findByComicId(1L);
     }
 
     // ─── addReviewToComic ─────────────────────────────────────────────────────
@@ -166,19 +156,17 @@ class ReviewServiceTest {
     @Test
     @DisplayName("addReviewToComic — успех")
     void addReviewToComic_success() {
-        // rating в диапазоне 1-10 согласно @Min/@Max
         ReviewRequest request = new ReviewRequest("Шедевр!", 9, 1L);
 
         when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
         when(reviewRepository.save(any(Review.class))).thenReturn(testReview);
-        when(reviewMapper.toDto(testReview)).thenReturn(testReviewDto);
 
         ReviewDto result = reviewService.addReviewToComic(request);
 
         assertNotNull(result);
         assertEquals(9, result.rating());
+        assertEquals(1L, result.comicId());
         verify(reviewRepository).save(any(Review.class));
-        verify(cacheManager).invalidate();
     }
 
     @Test
@@ -197,21 +185,23 @@ class ReviewServiceTest {
     @DisplayName("update — успех")
     void update_success() {
         ReviewRequest request = new ReviewRequest("Обновлённый текст", 7, 1L);
-        ReviewDto updatedDto = new ReviewDto(1L, "Обновлённый текст", 7, 1L);
+        Review updated = new Review();
+        updated.setId(1L);
+        updated.setText("Обновлённый текст");
+        updated.setRating(7);
+        updated.setComic(testComic);
 
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(testReview));
-        when(reviewRepository.save(any(Review.class))).thenReturn(testReview);
-        when(reviewMapper.toDto(testReview)).thenReturn(updatedDto);
+        when(reviewRepository.save(any(Review.class))).thenReturn(updated);
 
         ReviewDto result = reviewService.update(1L, request);
 
         assertEquals("Обновлённый текст", result.text());
         assertEquals(7, result.rating());
-        verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("update — отзыв не найден")
+    @DisplayName("update — не найден")
     void update_notFound() {
         ReviewRequest request = new ReviewRequest("Текст", 5, 1L);
         when(reviewRepository.findById(99L)).thenReturn(Optional.empty());
@@ -230,11 +220,10 @@ class ReviewServiceTest {
         reviewService.delete(1L);
 
         verify(reviewRepository).deleteById(1L);
-        verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("delete — отзыв не найден")
+    @DisplayName("delete — не найден")
     void delete_notFound() {
         when(reviewRepository.existsById(99L)).thenReturn(false);
 
@@ -248,17 +237,19 @@ class ReviewServiceTest {
     @DisplayName("patch — обновляет text и rating")
     void patch_textAndRating() {
         ReviewPatchRequest request = new ReviewPatchRequest("Новый текст", 3, null);
-        ReviewDto patchedDto = new ReviewDto(1L, "Новый текст", 3, 1L);
+        Review patched = new Review();
+        patched.setId(1L);
+        patched.setText("Новый текст");
+        patched.setRating(3);
+        patched.setComic(testComic);
 
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(testReview));
-        when(reviewRepository.save(any(Review.class))).thenReturn(testReview);
-        when(reviewMapper.toDto(testReview)).thenReturn(patchedDto);
+        when(reviewRepository.save(any(Review.class))).thenReturn(patched);
 
         ReviewDto result = reviewService.patch(1L, request);
 
         assertEquals("Новый текст", result.text());
         assertEquals(3, result.rating());
-        verify(cacheManager).invalidate();
     }
 
     @Test
@@ -267,21 +258,24 @@ class ReviewServiceTest {
         Comic newComic = new Comic();
         newComic.setId(2L);
         ReviewPatchRequest request = new ReviewPatchRequest(null, null, 2L);
-        ReviewDto patchedDto = new ReviewDto(1L, "Отличный комикс!", 9, 2L);
+
+        Review patched = new Review();
+        patched.setId(1L);
+        patched.setText("Отличный комикс!");
+        patched.setRating(9);
+        patched.setComic(newComic);
 
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(testReview));
         when(comicRepository.findById(2L)).thenReturn(Optional.of(newComic));
-        when(reviewRepository.save(any(Review.class))).thenReturn(testReview);
-        when(reviewMapper.toDto(testReview)).thenReturn(patchedDto);
+        when(reviewRepository.save(any(Review.class))).thenReturn(patched);
 
         ReviewDto result = reviewService.patch(1L, request);
 
         assertEquals(2L, result.comicId());
-        verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("patch — comicId указан, комикс не найден")
+    @DisplayName("patch — comicId не найден")
     void patch_comicNotFound() {
         ReviewPatchRequest request = new ReviewPatchRequest(null, null, 99L);
         when(reviewRepository.findById(1L)).thenReturn(Optional.of(testReview));
