@@ -14,8 +14,7 @@ public class ApiCacheKey {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true
-        ;
+        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ApiCacheKey that = (ApiCacheKey) o;
         return Objects.equals(operation, that.operation)
