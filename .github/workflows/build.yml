@@ -1,0 +1,33 @@
+name: Build and Analyze
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+
+jobs:
+  build:
+    name: Build and analyze
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v3
+        with:
+          java-version: 25
+          distribution: 'oracle'
+
+      - name: Build with Maven and Run Tests
+        run: mvn clean verify
+
+      - name: Analyze with SonarCloud
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn sonar:sonar -Dsonar.projectKey=Nekitoso-o_Javalabs -Dsonar.organization=nekitoso-o -Dsonar.host.url=https://sonarcloud.io
