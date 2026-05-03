@@ -1,27 +1,25 @@
 name: Build and Analyze
-
 on:
   push:
     branches:
       - main
   pull_request:
-    types: [ opened, synchronize, reopened ]
+    types: [opened, synchronize, reopened]
 
 jobs:
   build:
     name: Build and analyze
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 25
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
-          java-version: 25
-          distribution: 'oracle'
+          java-version: 17
+          distribution: 'temurin'
 
       - name: Build with Maven and Run Tests
         run: mvn clean verify
