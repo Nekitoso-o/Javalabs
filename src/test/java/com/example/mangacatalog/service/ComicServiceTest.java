@@ -853,4 +853,18 @@ class ComicServiceTest {
         assertTrue(ex.getErrors().containsKey("genreIds"));
         verify(comicRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("patch — title null — ValidationException")
+    void patch_titleNull() {
+        ComicPatchRequest request = new ComicPatchRequest(
+            null, 1990, null, null, null);
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
+
+        assertThrows(ValidationException.class,
+            () -> comicService.patch(1L, request));
+
+        verify(comicRepository, never()).save(any());
+    }
 }
