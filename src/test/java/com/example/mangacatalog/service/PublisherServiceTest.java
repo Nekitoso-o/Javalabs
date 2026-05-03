@@ -210,4 +210,23 @@ class PublisherServiceTest {
         assertThrows(ResourceNotFoundException.class,
             () -> publisherService.delete(99L));
     }
+    // Не покрыто: update — кэш инвалидируется
+    @Test
+    @DisplayName("update — кэш инвалидируется")
+    void update_invalidatesCache() {
+        when(repository.findAll()).thenReturn(List.of(testPublisher));
+        publisherService.getAll(); // заполняем кэш
+
+        Publisher updated = new Publisher();
+        updated.setId(1L);
+        updated.setName("Viz Media");
+        PublisherRequest request = new PublisherRequest("Viz Media");
+        when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
+        when(repository.save(any(Publisher.class))).thenReturn(updated);
+        publisherService.update(1L, request); // инвалидирует кэш
+
+        when(repository.findAll()).thenReturn(List.of(updated));
+        publisherService.getAll(); // снова идёт в БД
+        verify(repository, times(2)).findAll();
+    }
 }

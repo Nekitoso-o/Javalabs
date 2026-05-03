@@ -216,4 +216,41 @@ class AuthorServiceTest {
         assertThrows(ResourceNotFoundException.class,
             () -> authorService.delete(99L));
     }
+    // Не покрыто: update — кэш инвалидируется
+    @Test
+    @DisplayName("update — кэш инвалидируется")
+    void update_invalidatesCache() {
+        when(repository.findAll()).thenReturn(List.of(testAuthor));
+        authorService.getAll(); // заполняем кэш
+
+        Author updated = new Author();
+        updated.setId(1L);
+        updated.setName("Новое Имя");
+        AuthorRequest request = new AuthorRequest("Новое Имя");
+        when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
+        when(repository.save(any(Author.class))).thenReturn(updated);
+        authorService.update(1L, request); // инвалидирует кэш
+
+        when(repository.findAll()).thenReturn(List.of(updated));
+        authorService.getAll(); // снова идёт в БД
+        verify(repository, times(2)).findAll();
+    }
+
+    // Не покрыто: delete — кэш инвалидируется
+    @Test
+    @DisplayName("delete — кэш инвалидируется")
+    void delete_invalidatesCache() {
+        when(repository.findAll()).thenReturn(List.of(testAuthor));
+        authorService.getAll(); // заполняем кэш
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
+        authorService.delete(1L); // инвалидирует кэш
+
+        Author newAuthor = new Author();
+        newAuthor.setId(2L);
+        newAuthor.setName("Другой");
+        when(repository.findAll()).thenReturn(List.of(newAuthor));
+        authorService.getAll(); // снова идёт в БД
+        verify(repository, times(2)).findAll();
+    }
 }
