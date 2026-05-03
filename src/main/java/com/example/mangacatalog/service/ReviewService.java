@@ -56,7 +56,7 @@ public class ReviewService {
         ApiCacheKey key = new ApiCacheKey("getReviewById", id);
 
         Object cached = cacheManager.get(key);
-        if (cached != null) return (ReviewDto) cached;
+        if (cached != null) return (ReviewDto) cached ;
 
         LOG.info("Запрос к БД для ID: {}", id);
         Review review = reviewRepository.findById(id)
