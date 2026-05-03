@@ -215,8 +215,9 @@ public class ComicService {
 
         ResolvedEntities resolved = validateAndResolve(request);
 
-        existing.setTitle(request.title());
-
+        if (request.title() != null) {
+            existing.setTitle(request.title());
+        }
         if (request.releaseYear() != null) {
             existing.setReleaseYear(request.releaseYear());
         }
