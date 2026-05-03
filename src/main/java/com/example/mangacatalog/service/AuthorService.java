@@ -89,14 +89,13 @@ public class AuthorService {
     @Transactional
     public void delete(Long id) {
         Author author = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException(String.format(AUTHOR_NOT_FOUND_MSG, id)));
-        if (author.getComics() != null) {
-            for (Comic comic : author.getComics()) {
-                comic.setAuthor(null);
-            }
+            .orElseThrow(() -> new ResourceNotFoundException(
+                String.format(AUTHOR_NOT_FOUND_MSG, id)));
+
+        for (Comic comic : author.getComics()) {
+            comic.setAuthor(null);
         }
         repository.delete(author);
-
         cacheManager.invalidate();
     }
 }

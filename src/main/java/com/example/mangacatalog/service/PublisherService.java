@@ -83,12 +83,11 @@ public class PublisherService {
     @Transactional
     public void delete(Long id) {
         Publisher publisher = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException(String.format(PUBLISHER_NOT_FOUND_MSG, id)));
+            .orElseThrow(() -> new ResourceNotFoundException(
+                String.format(PUBLISHER_NOT_FOUND_MSG, id)));
 
-        if (publisher.getComics() != null) {
-            for (Comic comic : publisher.getComics()) {
-                comic.setPublisher(null);
-            }
+        for (Comic comic : publisher.getComics()) {
+            comic.setPublisher(null);
         }
         repository.delete(publisher);
         cacheManager.invalidate();

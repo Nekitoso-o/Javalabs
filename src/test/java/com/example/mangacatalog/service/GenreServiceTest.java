@@ -242,15 +242,4 @@ class GenreServiceTest {
         genreService.getAll();
         verify(repository, times(2)).findAll();
     }
-    @Test
-    @DisplayName("delete — успех, getComics() возвращает null")
-    void delete_success_nullComics() {
-        Genre genreWithNullComics = mock(Genre.class);
-        when(genreWithNullComics.getComics()).thenReturn(null);
-        when(repository.findById(1L)).thenReturn(Optional.of(genreWithNullComics));
-
-        genreService.delete(1L);
-
-        verify(repository).delete(genreWithNullComics);
-    }
 }

@@ -83,12 +83,11 @@ public class GenreService {
     @Transactional
     public void delete(Long id) {
         Genre genre = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException(String.format(GENRE_NOT_FOUND_MSG, id)));
+            .orElseThrow(() -> new ResourceNotFoundException(
+                String.format(GENRE_NOT_FOUND_MSG, id)));
 
-        if (genre.getComics() != null) {
-            for (Comic comic : genre.getComics()) {
-                comic.getGenres().remove(genre);
-            }
+        for (Comic comic : genre.getComics()) {
+            comic.getGenres().remove(genre);
         }
         repository.delete(genre);
         cacheManager.invalidate();
