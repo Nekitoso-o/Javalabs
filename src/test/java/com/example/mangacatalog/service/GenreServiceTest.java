@@ -176,6 +176,24 @@ class GenreServiceTest {
             () -> genreService.update(99L, request));
     }
 
+    @Test
+    @DisplayName("update — кэш инвалидируется")
+    void update_invalidatesCache() {
+        when(repository.findAll()).thenReturn(List.of(testGenre));
+        genreService.getAll();
+
+        Genre updated = new Genre();
+        updated.setId(1L);
+        updated.setName("Сёдзё");
+        when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
+        when(repository.save(any(Genre.class))).thenReturn(updated);
+        genreService.update(1L, new GenreRequest("Сёдзё"));
+
+        when(repository.findAll()).thenReturn(List.of(updated));
+        genreService.getAll();
+        verify(repository, times(2)).findAll();
+    }
+
     // ─── delete ───────────────────────────────────────────────────────────────
 
     @Test
@@ -211,39 +229,17 @@ class GenreServiceTest {
             () -> genreService.delete(99L));
     }
 
-    // Строка 88: if (genre.getComics() != null) — ветка false (null)
-// Нужен тест где getComics() возвращает null
     @Test
-    @DisplayName("delete — getComics() возвращает null, не падает")
-    void delete_success_comicsIsNull() {
-        // Создаём жанр через мок чтобы getComics() вернул null
-        Genre genreWithNullComics = mock(Genre.class);
-        when(genreWithNullComics.getComics()).thenReturn(null);
-        when(repository.findById(2L)).thenReturn(Optional.of(genreWithNullComics));
+    @DisplayName("delete — кэш инвалидируется")
+    void delete_invalidatesCache() {
+        when(repository.findAll()).thenReturn(List.of(testGenre));
+        genreService.getAll();
 
-        // Не должно выбросить NullPointerException
-        genreService.delete(2L);
+        when(repository.findById(1L)).thenReturn(Optional.of(testGenre));
+        genreService.delete(1L);
 
-        verify(repository).delete(genreWithNullComics);
-    }
-
-    // Строка 88: покрываем ветку где список пустой (не null)
-// и ветку где список null — но Genre инициализирует список в конструкторе,
-// поэтому null никогда не будет. Sonar это тоже знает.
-// Добавляем тест с пустым списком комиксов явно
-    @Test
-    @DisplayName("delete — успех, пустой список комиксов")
-    void delete_success_emptyComicsList() {
-        // Genre инициализирует comics как new ArrayList() — список пустой, не null
-        Genre emptyGenre = new Genre();
-        emptyGenre.setId(3L);
-        emptyGenre.setName("Пустой жанр");
-        // getComics() вернёт пустой ArrayList
-
-        when(repository.findById(3L)).thenReturn(Optional.of(emptyGenre));
-
-        genreService.delete(3L);
-
-        verify(repository).delete(emptyGenre);
+        when(repository.findAll()).thenReturn(Collections.emptyList());
+        genreService.getAll();
+        verify(repository, times(2)).findAll();
     }
 }

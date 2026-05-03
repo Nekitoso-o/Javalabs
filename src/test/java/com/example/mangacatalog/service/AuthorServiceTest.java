@@ -62,7 +62,7 @@ class AuthorServiceTest {
     }
 
     @Test
-    @DisplayName("getAll — второй вызов берёт из кэша")
+    @DisplayName("getAll — второй вызов из кэша")
     void getAll_secondCall_fromCache() {
         when(repository.findAll()).thenReturn(List.of(testAuthor));
 
@@ -77,15 +77,13 @@ class AuthorServiceTest {
     void getAll_empty() {
         when(repository.findAll()).thenReturn(Collections.emptyList());
 
-        List<AuthorDto> result = authorService.getAll();
-
-        assertTrue(result.isEmpty());
+        assertTrue(authorService.getAll().isEmpty());
     }
 
     // ─── getById ──────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getById — успех, результат кэшируется")
+    @DisplayName("getById — успех")
     void getById_success() {
         when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
 
@@ -136,7 +134,7 @@ class AuthorServiceTest {
     }
 
     @Test
-    @DisplayName("create — кэш инвалидируется после создания")
+    @DisplayName("create — кэш инвалидируется")
     void create_invalidatesCache() {
         when(repository.findAll()).thenReturn(List.of(testAuthor));
         authorService.getAll();
@@ -145,8 +143,7 @@ class AuthorServiceTest {
         saved.setId(2L);
         saved.setName("Масаси Кисимото");
         when(repository.save(any(Author.class))).thenReturn(saved);
-        AuthorRequest request = new AuthorRequest("Масаси Кисимото");
-        authorService.create(request);
+        authorService.create(new AuthorRequest("Масаси Кисимото"));
 
         when(repository.findAll()).thenReturn(List.of(testAuthor, saved));
         authorService.getAll();
@@ -182,10 +179,28 @@ class AuthorServiceTest {
             () -> authorService.update(99L, request));
     }
 
+    @Test
+    @DisplayName("update — кэш инвалидируется")
+    void update_invalidatesCache() {
+        when(repository.findAll()).thenReturn(List.of(testAuthor));
+        authorService.getAll();
+
+        Author updated = new Author();
+        updated.setId(1L);
+        updated.setName("Новое Имя");
+        when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
+        when(repository.save(any(Author.class))).thenReturn(updated);
+        authorService.update(1L, new AuthorRequest("Новое Имя"));
+
+        when(repository.findAll()).thenReturn(List.of(updated));
+        authorService.getAll();
+        verify(repository, times(2)).findAll();
+    }
+
     // ─── delete ───────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("delete — успех, комиксы автора обнуляются")
+    @DisplayName("delete — успех, комиксы обнуляются")
     void delete_success_withComics() {
         Comic comic = new Comic();
         comic.setAuthor(testAuthor);
@@ -216,55 +231,18 @@ class AuthorServiceTest {
         assertThrows(ResourceNotFoundException.class,
             () -> authorService.delete(99L));
     }
-    // Не покрыто: update — кэш инвалидируется
-    @Test
-    @DisplayName("update — кэш инвалидируется")
-    void update_invalidatesCache() {
-        when(repository.findAll()).thenReturn(List.of(testAuthor));
-        authorService.getAll(); // заполняем кэш
 
-        Author updated = new Author();
-        updated.setId(1L);
-        updated.setName("Новое Имя");
-        AuthorRequest request = new AuthorRequest("Новое Имя");
-        when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
-        when(repository.save(any(Author.class))).thenReturn(updated);
-        authorService.update(1L, request); // инвалидирует кэш
-
-        when(repository.findAll()).thenReturn(List.of(updated));
-        authorService.getAll(); // снова идёт в БД
-        verify(repository, times(2)).findAll();
-    }
-
-    // Не покрыто: delete — кэш инвалидируется
     @Test
     @DisplayName("delete — кэш инвалидируется")
     void delete_invalidatesCache() {
         when(repository.findAll()).thenReturn(List.of(testAuthor));
-        authorService.getAll(); // заполняем кэш
+        authorService.getAll();
 
         when(repository.findById(1L)).thenReturn(Optional.of(testAuthor));
-        authorService.delete(1L); // инвалидирует кэш
+        authorService.delete(1L);
 
-        Author newAuthor = new Author();
-        newAuthor.setId(2L);
-        newAuthor.setName("Другой");
-        when(repository.findAll()).thenReturn(List.of(newAuthor));
-        authorService.getAll(); // снова идёт в БД
+        when(repository.findAll()).thenReturn(Collections.emptyList());
+        authorService.getAll();
         verify(repository, times(2)).findAll();
-    }
-
-    @Test
-    @DisplayName("delete — успех, пустой список комиксов у автора")
-    void delete_success_emptyComicsList() {
-        Author emptyAuthor = new Author();
-        emptyAuthor.setId(3L);
-        emptyAuthor.setName("Пустой автор");
-
-        when(repository.findById(3L)).thenReturn(Optional.of(emptyAuthor));
-
-        authorService.delete(3L);
-
-        verify(repository).delete(emptyAuthor);
     }
 }

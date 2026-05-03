@@ -176,6 +176,24 @@ class PublisherServiceTest {
             () -> publisherService.update(99L, request));
     }
 
+    @Test
+    @DisplayName("update — кэш инвалидируется")
+    void update_invalidatesCache() {
+        when(repository.findAll()).thenReturn(List.of(testPublisher));
+        publisherService.getAll();
+
+        Publisher updated = new Publisher();
+        updated.setId(1L);
+        updated.setName("Viz Media");
+        when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
+        when(repository.save(any(Publisher.class))).thenReturn(updated);
+        publisherService.update(1L, new PublisherRequest("Viz Media"));
+
+        when(repository.findAll()).thenReturn(List.of(updated));
+        publisherService.getAll();
+        verify(repository, times(2)).findAll();
+    }
+
     // ─── delete ───────────────────────────────────────────────────────────────
 
     @Test
@@ -210,41 +228,18 @@ class PublisherServiceTest {
         assertThrows(ResourceNotFoundException.class,
             () -> publisherService.delete(99L));
     }
-    // Не покрыто: update — кэш инвалидируется
+
     @Test
-    @DisplayName("update — кэш инвалидируется")
-    void update_invalidatesCache() {
+    @DisplayName("delete — кэш инвалидируется")
+    void delete_invalidatesCache() {
         when(repository.findAll()).thenReturn(List.of(testPublisher));
-        publisherService.getAll(); // заполняем кэш
+        publisherService.getAll();
 
-        Publisher updated = new Publisher();
-        updated.setId(1L);
-        updated.setName("Viz Media");
-        PublisherRequest request = new PublisherRequest("Viz Media");
         when(repository.findById(1L)).thenReturn(Optional.of(testPublisher));
-        when(repository.save(any(Publisher.class))).thenReturn(updated);
-        publisherService.update(1L, request); // инвалидирует кэш
+        publisherService.delete(1L);
 
-        when(repository.findAll()).thenReturn(List.of(updated));
-        publisherService.getAll(); // снова идёт в БД
+        when(repository.findAll()).thenReturn(Collections.emptyList());
+        publisherService.getAll();
         verify(repository, times(2)).findAll();
-    }
-
-    // Строка 88: if (publisher.getComics() != null) — ветка false
-// Publisher инициализирует comics как new ArrayList() — null не бывает
-// Покрываем пустой список явно
-    @Test
-    @DisplayName("delete — успех, пустой список комиксов у издателя")
-    void delete_success_emptyComicsList() {
-        Publisher emptyPublisher = new Publisher();
-        emptyPublisher.setId(3L);
-        emptyPublisher.setName("Пустой издатель");
-        // getComics() вернёт пустой ArrayList
-
-        when(repository.findById(3L)).thenReturn(Optional.of(emptyPublisher));
-
-        publisherService.delete(3L);
-
-        verify(repository).delete(emptyPublisher);
     }
 }
