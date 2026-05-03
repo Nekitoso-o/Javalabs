@@ -14,8 +14,8 @@
     <groupId>com.example</groupId>
     <artifactId>book-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>book-service</name>
-    <description>Lab 1: Book Service REST API</description>
+    <name>Manga-service</name>
+    <description>Lab 1 Service REST API</description>
 
 
     <properties>
