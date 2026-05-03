@@ -210,4 +210,40 @@ class GenreServiceTest {
         assertThrows(ResourceNotFoundException.class,
             () -> genreService.delete(99L));
     }
+
+    // Строка 88: if (genre.getComics() != null) — ветка false (null)
+// Нужен тест где getComics() возвращает null
+    @Test
+    @DisplayName("delete — getComics() возвращает null, не падает")
+    void delete_success_comicsIsNull() {
+        // Создаём жанр через мок чтобы getComics() вернул null
+        Genre genreWithNullComics = mock(Genre.class);
+        when(genreWithNullComics.getComics()).thenReturn(null);
+        when(repository.findById(2L)).thenReturn(Optional.of(genreWithNullComics));
+
+        // Не должно выбросить NullPointerException
+        genreService.delete(2L);
+
+        verify(repository).delete(genreWithNullComics);
+    }
+
+    // Строка 88: покрываем ветку где список пустой (не null)
+// и ветку где список null — но Genre инициализирует список в конструкторе,
+// поэтому null никогда не будет. Sonar это тоже знает.
+// Добавляем тест с пустым списком комиксов явно
+    @Test
+    @DisplayName("delete — успех, пустой список комиксов")
+    void delete_success_emptyComicsList() {
+        // Genre инициализирует comics как new ArrayList() — список пустой, не null
+        Genre emptyGenre = new Genre();
+        emptyGenre.setId(3L);
+        emptyGenre.setName("Пустой жанр");
+        // getComics() вернёт пустой ArrayList
+
+        when(repository.findById(3L)).thenReturn(Optional.of(emptyGenre));
+
+        genreService.delete(3L);
+
+        verify(repository).delete(emptyGenre);
+    }
 }

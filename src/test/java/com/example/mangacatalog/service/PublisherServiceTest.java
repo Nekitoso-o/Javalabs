@@ -229,4 +229,22 @@ class PublisherServiceTest {
         publisherService.getAll(); // снова идёт в БД
         verify(repository, times(2)).findAll();
     }
+
+    // Строка 88: if (publisher.getComics() != null) — ветка false
+// Publisher инициализирует comics как new ArrayList() — null не бывает
+// Покрываем пустой список явно
+    @Test
+    @DisplayName("delete — успех, пустой список комиксов у издателя")
+    void delete_success_emptyComicsList() {
+        Publisher emptyPublisher = new Publisher();
+        emptyPublisher.setId(3L);
+        emptyPublisher.setName("Пустой издатель");
+        // getComics() вернёт пустой ArrayList
+
+        when(repository.findById(3L)).thenReturn(Optional.of(emptyPublisher));
+
+        publisherService.delete(3L);
+
+        verify(repository).delete(emptyPublisher);
+    }
 }

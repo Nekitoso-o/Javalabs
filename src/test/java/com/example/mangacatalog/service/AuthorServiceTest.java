@@ -253,4 +253,18 @@ class AuthorServiceTest {
         authorService.getAll(); // снова идёт в БД
         verify(repository, times(2)).findAll();
     }
+
+    @Test
+    @DisplayName("delete — успех, пустой список комиксов у автора")
+    void delete_success_emptyComicsList() {
+        Author emptyAuthor = new Author();
+        emptyAuthor.setId(3L);
+        emptyAuthor.setName("Пустой автор");
+
+        when(repository.findById(3L)).thenReturn(Optional.of(emptyAuthor));
+
+        authorService.delete(3L);
+
+        verify(repository).delete(emptyAuthor);
+    }
 }

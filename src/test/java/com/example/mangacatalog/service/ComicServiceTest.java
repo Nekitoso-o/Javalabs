@@ -703,4 +703,107 @@ class ComicServiceTest {
         assertEquals(1, result.size());
         assertEquals(2, result.get(0).genres().size());
     }
+    // Строка 222: patch — обновляет releaseYear (ветка true)
+    @Test
+    @DisplayName("patch — обновляет releaseYear")
+    void patch_releaseYear() {
+        ComicPatchRequest request = new ComicPatchRequest(
+            "Берсерк", 1990, null, null, null);
+        Comic patched = new Comic();
+        patched.setId(1L);
+        patched.setTitle("Берсерк");
+        patched.setReleaseYear(1990);
+        patched.setAuthor(testAuthor);
+        patched.setPublisher(testPublisher);
+        patched.setGenres(Set.of(testGenre));
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
+        when(comicRepository.save(any(Comic.class))).thenReturn(patched);
+
+        ComicDto result = comicService.patch(1L, request);
+
+        assertEquals(1990, result.releaseYear());
+    }
+
+    // Строка 228: patch — обновляет publisherId (ветка true)
+    @Test
+    @DisplayName("patch — обновляет publisherId")
+    void patch_publisherId() {
+        Publisher newPublisher = new Publisher();
+        newPublisher.setId(2L);
+        newPublisher.setName("Kodansha");
+
+        ComicPatchRequest request = new ComicPatchRequest(
+            "Берсерк", null, null, 2L, null);
+        Comic patched = new Comic();
+        patched.setId(1L);
+        patched.setTitle("Берсерк");
+        patched.setReleaseYear(1989);
+        patched.setAuthor(testAuthor);
+        patched.setPublisher(newPublisher);
+        patched.setGenres(Set.of(testGenre));
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
+        when(publisherRepository.existsById(2L)).thenReturn(true);
+        when(publisherRepository.getReferenceById(2L)).thenReturn(newPublisher);
+        when(comicRepository.save(any(Comic.class))).thenReturn(patched);
+
+        ComicDto result = comicService.patch(1L, request);
+
+        assertEquals("Kodansha", result.publisher().name());
+    }
+
+    // Строка 270: extractAuthorId — ветка return null
+// Строка 276: extractPublisherId — ветка return null
+// Строка 282: extractGenreIds — ветка return emptySet
+// Покрываем передав объект не ComicRequest и не ComicPatchRequest через patch с null полями
+    @Test
+    @DisplayName("patch — все поля null, ничего не обновляется")
+    void patch_allFieldsNull() {
+        ComicPatchRequest request = new ComicPatchRequest(
+            null, null, null, null, null);
+        Comic patched = new Comic();
+        patched.setId(1L);
+        patched.setTitle("Берсерк");
+        patched.setReleaseYear(1989);
+        patched.setAuthor(testAuthor);
+        patched.setPublisher(testPublisher);
+        patched.setGenres(Set.of(testGenre));
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
+        when(comicRepository.save(any(Comic.class))).thenReturn(patched);
+
+        ComicDto result = comicService.patch(1L, request);
+
+        // Ничего не изменилось
+        assertEquals("Берсерк", result.title());
+        assertEquals(1989, result.releaseYear());
+    }
+
+    // Строки 270, 276, 282 — defensive return null/emptySet
+// Покрываются косвенно через patch с ComicPatchRequest где authorId=null
+    @Test
+    @DisplayName("patch — authorId null, publisherId null, genreIds null — extract возвращает defaults")
+    void patch_allIdsNull_extractDefaults() {
+        ComicPatchRequest request = new ComicPatchRequest(
+            "Берсерк", null, null, null, null);
+        Comic saved = new Comic();
+        saved.setId(1L);
+        saved.setTitle("Берсерк");
+        saved.setReleaseYear(1989);
+        saved.setAuthor(testAuthor);
+        saved.setPublisher(testPublisher);
+        saved.setGenres(Set.of(testGenre));
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
+        when(comicRepository.save(any(Comic.class))).thenReturn(saved);
+
+        // authorId=null → validateAuthor получит null → вернёт Optional.empty()
+        // publisherId=null → validatePublisher получит null → вернёт Optional.empty()
+        // genreIds=null → extractGenreIds вернёт emptySet → validateGenres вернёт Optional.empty()
+        ComicDto result = comicService.patch(1L, request);
+
+        assertNotNull(result);
+        verify(comicRepository).save(any(Comic.class));
+    }
 }
