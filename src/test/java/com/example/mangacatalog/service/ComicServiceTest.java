@@ -1,3 +1,4 @@
+
 package com.example.mangacatalog.service;
 
 import com.example.mangacatalog.cache.ApiCacheManager;
@@ -91,7 +92,7 @@ class ComicServiceTest {
         testComic.setGenres(new HashSet<>(Set.of(testGenre)));
     }
 
-    // ─── getAll ───────────────────────────────────────────────────────────────
+// ─── getAll ───────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("getAll — кэш пуст, запрос к БД")
@@ -126,7 +127,7 @@ class ComicServiceTest {
         assertTrue(comicService.getAll().isEmpty());
     }
 
-    // ─── getById ──────────────────────────────────────────────────────────────
+// ─── getById ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("getById — успех")
@@ -161,7 +162,7 @@ class ComicServiceTest {
             () -> comicService.getById(99L));
     }
 
-    // ─── searchByTitle ────────────────────────────────────────────────────────
+// ─── searchByTitle ────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("searchByTitle — найдены результаты")
@@ -197,7 +198,7 @@ class ComicServiceTest {
         assertTrue(comicService.searchByTitle("xyz").isEmpty());
     }
 
-    // ─── getComicsByAuthor ────────────────────────────────────────────────────
+// ─── getComicsByAuthor ────────────────────────────────────────────────────
 
     @Test
     @DisplayName("getComicsByAuthor — успех")
@@ -221,7 +222,7 @@ class ComicServiceTest {
         verify(comicRepository, times(1)).findByAuthorId(1L);
     }
 
-    // ─── searchComplex ────────────────────────────────────────────────────────
+// ─── searchComplex ────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("searchComplex — JPQL, кэш пуст")
@@ -343,31 +344,6 @@ class ComicServiceTest {
     }
 
     @Test
-    @DisplayName("searchComplex — Native, genreIds не null, genreNames null")
-    void searchComplex_native_genreIdsNotNull_genreNamesNull() {
-        ComicNativeProjection proj = new ComicNativeProjection() {
-            @Override public Long getId() { return 1L; }
-            @Override public String getTitle() { return "Берсерк"; }
-            @Override public Integer getReleaseYear() { return 1989; }
-            @Override public Long getAuthorId() { return 1L; }
-            @Override public String getAuthorName() { return "Кэнтаро Миура"; }
-            @Override public Long getPublisherId() { return 1L; }
-            @Override public String getPublisherName() { return "Hakusensha"; }
-            @Override public String getGenreIds() { return "1"; }
-            @Override public String getGenreNames() { return null; }
-        };
-
-        when(comicRepository.findByGenreAndYearNative(any(), any(), any()))
-            .thenReturn(List.of(proj));
-
-        List<ComicDto> result =
-            comicService.searchComplex("Жанр", 1989, 0, 5, true);
-
-        assertEquals(1, result.size());
-        assertTrue(result.get(0).genres().isEmpty());
-    }
-
-    @Test
     @DisplayName("searchComplex — Native, пустой результат")
     void searchComplex_native_empty() {
         when(comicRepository.findByGenreAndYearNative(any(), any(), any()))
@@ -379,7 +355,7 @@ class ComicServiceTest {
         assertTrue(result.isEmpty());
     }
 
-    // ─── create ───────────────────────────────────────────────────────────────
+// ─── create ───────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("create — успех")
@@ -398,19 +374,6 @@ class ComicServiceTest {
         assertNotNull(result);
         assertEquals("Берсерк", result.title());
         verify(comicRepository).save(any(Comic.class));
-    }
-
-    @Test
-    @DisplayName("create — пустой genreIds — ValidationException")
-    void create_emptyGenreIds() {
-        ComicRequest request = new ComicRequest(
-            "Берсерк", 1989, 1L, 1L, Collections.emptySet());
-
-        ValidationException ex = assertThrows(ValidationException.class,
-            () -> comicService.create(request));
-
-        assertTrue(ex.getErrors().containsKey("genreIds"));
-        verify(comicRepository, never()).save(any());
     }
 
     @Test
@@ -504,7 +467,7 @@ class ComicServiceTest {
         verify(comicRepository, never()).save(any());
     }
 
-    // ─── update ───────────────────────────────────────────────────────────────
+// ─── update ───────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("update — успех")
@@ -581,27 +544,7 @@ class ComicServiceTest {
         verify(comicRepository, never()).save(any());
     }
 
-    @Test
-    @DisplayName("update — часть жанров не найдена — ValidationException")
-    void update_partialGenresNotFound() {
-        ComicRequest request = new ComicRequest(
-            "Берсерк", 1989, 1L, 1L, Set.of(1L, 2L));
-        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
-        when(authorRepository.existsById(1L)).thenReturn(true);
-        when(authorRepository.getReferenceById(1L)).thenReturn(testAuthor);
-        when(publisherRepository.existsById(1L)).thenReturn(true);
-        when(publisherRepository.getReferenceById(1L)).thenReturn(testPublisher);
-        when(genreRepository.findAllById(Set.of(1L, 2L)))
-            .thenReturn(List.of(testGenre));
-
-        ValidationException ex = assertThrows(ValidationException.class,
-            () -> comicService.update(1L, request));
-
-        assertTrue(ex.getErrors().containsKey("genreIds"));
-        verify(comicRepository, never()).save(any());
-    }
-
-    // ─── delete ───────────────────────────────────────────────────────────────
+// ─── delete ───────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("delete — успех")
@@ -624,23 +567,7 @@ class ComicServiceTest {
         verify(comicRepository, never()).deleteById(any());
     }
 
-    // ─── patch ────────────────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("patch — только title, остальные поля null")
-    void patch_allNull() {
-        ComicPatchRequest request = new ComicPatchRequest(
-            "Берсерк", null, null, null, null);
-
-        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
-        when(comicRepository.save(any(Comic.class))).thenReturn(testComic);
-
-        ComicDto result = comicService.patch(1L, request);
-
-        assertEquals("Берсерк", result.title());
-        assertEquals(1989, result.releaseYear());
-        verify(comicRepository).save(any(Comic.class));
-    }
+// ─── patch ────────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("patch — обновляет title")
@@ -812,5 +739,118 @@ class ComicServiceTest {
             () -> comicService.patch(1L, request));
 
         assertTrue(ex.getErrors().containsKey("genreIds"));
+    }
+
+    @Test
+    @DisplayName("extractAuthorId — неизвестный тип — возвращает null")
+    void extractAuthorId_unknownType_returnsNull() throws Exception {
+        var method = ComicService.class
+            .getDeclaredMethod("extractAuthorId", Object.class);
+        method.setAccessible(true);
+
+        Object result = method.invoke(comicService, "some_unknown_object");
+
+        assertNull(result);
+    }
+
+    @Test
+    @DisplayName("extractPublisherId — неизвестный тип — возвращает null")
+    void extractPublisherId_unknownType_returnsNull() throws Exception {
+        var method = ComicService.class
+            .getDeclaredMethod("extractPublisherId", Object.class);
+        method.setAccessible(true);
+
+        Object result = method.invoke(comicService, "some_unknown_object");
+
+        assertNull(result);
+    }
+
+    @Test
+    @DisplayName("extractGenreIds — неизвестный тип — возвращает emptySet")
+    void extractGenreIds_unknownType_returnsEmptySet() throws Exception {
+        var method = ComicService.class
+            .getDeclaredMethod("extractGenreIds", Object.class);
+        method.setAccessible(true);
+
+        @SuppressWarnings("unchecked")
+        Set<Long> result = (Set<Long>) method.invoke(comicService, "some_unknown_object");
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @DisplayName("searchComplex — Native, genreIds не null, genreNames null")
+    void searchComplex_native_genreIdsNotNull_genreNamesNull() {
+        ComicNativeProjection proj = new ComicNativeProjection() {
+            @Override public Long getId() { return 1L; }
+            @Override public String getTitle() { return "Берсерк"; }
+            @Override public Integer getReleaseYear() { return 1989; }
+            @Override public Long getAuthorId() { return 1L; }
+            @Override public String getAuthorName() { return "Кэнтаро Миура"; }
+            @Override public Long getPublisherId() { return 1L; }
+            @Override public String getPublisherName() { return "Hakusensha"; }
+            @Override public String getGenreIds() { return "1"; }
+            @Override public String getGenreNames() { return null; } // null!
+        };
+
+        when(comicRepository.findByGenreAndYearNative(any(), any(), any()))
+            .thenReturn(List.of(proj));
+
+        List<ComicDto> result =
+            comicService.searchComplex("Жанр", 1989, 0, 5, true);
+
+        assertEquals(1, result.size());
+        assertTrue(result.get(0).genres().isEmpty());
+    }
+
+    @Test
+    @DisplayName("patch — только title, остальные поля null")
+    void patch_allNull() {
+        ComicPatchRequest request = new ComicPatchRequest(
+            "Берсерк", null, null, null, null);
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
+        when(comicRepository.save(any(Comic.class))).thenReturn(testComic);
+
+        ComicDto result = comicService.patch(1L, request);
+
+        assertEquals("Берсерк", result.title());
+        assertEquals(1989, result.releaseYear());
+        verify(comicRepository).save(any(Comic.class));
+    }
+
+    @Test
+    @DisplayName("create — пустой genreIds — ValidationException от аннотации")
+    void create_emptyGenreIds() {
+        ComicRequest request = new ComicRequest(
+            "Берсерк", 1989, 1L, 1L, Collections.emptySet());
+
+        assertThrows(ValidationException.class,
+            () -> comicService.create(request));
+
+        verify(comicRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("update — часть жанров не найдена — ValidationException")
+    void update_partialGenresNotFound() {
+        ComicRequest request = new ComicRequest(
+            "Берсерк", 1989, 1L, 1L, Set.of(1L, 2L));
+
+        when(comicRepository.findById(1L)).thenReturn(Optional.of(testComic));
+        when(authorRepository.existsById(1L)).thenReturn(true);
+        when(authorRepository.getReferenceById(1L)).thenReturn(testAuthor);
+        when(publisherRepository.existsById(1L)).thenReturn(true);
+        when(publisherRepository.getReferenceById(1L)).thenReturn(testPublisher);
+        // возвращаем только один жанр из двух запрошенных
+        when(genreRepository.findAllById(Set.of(1L, 2L)))
+            .thenReturn(List.of(testGenre)); // найден только ID=1, ID=2 отсутствует
+
+        ValidationException ex = assertThrows(ValidationException.class,
+            () -> comicService.update(1L, request));
+
+        assertTrue(ex.getErrors().containsKey("genreIds"));
+        verify(comicRepository, never()).save(any());
     }
 }
