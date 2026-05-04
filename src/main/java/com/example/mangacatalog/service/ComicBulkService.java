@@ -25,9 +25,7 @@ import java.util.stream.IntStream;
 @Service
 public class ComicBulkService {
 
-    private static final Logger LOG =
-        LoggerFactory.getLogger(ComicBulkService.class);
-
+    private static final Logger LOG = LoggerFactory.getLogger(ComicBulkService.class);
     private static final String ELEMENT_PREFIX = "Элемент [";
 
     private final ComicRepository comicRepository;
@@ -58,24 +56,28 @@ public class ComicBulkService {
         List<ComicDto> created = IntStream.range(0, requests.size())
             .mapToObj(index -> {
                 ComicRequest request = requests.get(index);
-                LOG.debug("Bulk [{}]: обработка комикса '{}'",
-                    index, request.title());
+                LOG.debug("Bulk [{}]: обработка комикса '{}'", index, request.title());
+
                 Comic comic = buildComic(index, request);
                 Comic saved = comicRepository.save(comic);
-                LOG.debug("Bulk [{}]: сохранён с ID={}",
+
+                LOG.debug("Bulk [{}]: save() вызван, ID={} — "
+                        + "с @Transactional: ещё не зафиксировано в БД; "
+                        + "без @Transactional: уже зафиксировано в БД",
                     index, saved.getId());
+
                 return comicMapper.toDto(saved);
             })
-            .toList();
+            .collect(Collectors.toList());
 
         cacheManager.invalidate();
-        LOG.info("Bulk-создание завершено: создано {} комиксов",
-            created.size());
+        LOG.info("Bulk-создание завершено: создано {} комиксов", created.size());
+
         return new BulkComicResult(created, created.size());
     }
 
-    private Comic buildComic(int index, ComicRequest request) {
 
+    private Comic buildComic(int index, ComicRequest request) {
 
         Author author = Optional.ofNullable(request.authorId())
             .flatMap(authorRepository::findById)
@@ -101,7 +103,7 @@ public class ComicBulkService {
                 List<Long> missingIds = ids.stream()
                     .filter(id -> !foundIds.contains(id))
                     .sorted()
-                    .toList();
+                    .collect(Collectors.toList());
 
                 if (!missingIds.isEmpty()) {
                     throw new IllegalArgumentException(

@@ -45,7 +45,6 @@ class PublisherServiceTest {
         testPublisher.setName("Shueisha");
     }
 
-    // ─── getAll ───────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("getAll — кэш пуст, запрос к БД")
@@ -79,7 +78,7 @@ class PublisherServiceTest {
         assertTrue(publisherService.getAll().isEmpty());
     }
 
-    // ─── getById ──────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("getById — успех")
@@ -113,7 +112,7 @@ class PublisherServiceTest {
             () -> publisherService.getById(99L));
     }
 
-    // ─── create ───────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("create — успех")
@@ -148,7 +147,7 @@ class PublisherServiceTest {
         verify(repository, times(2)).findAll();
     }
 
-    // ─── update ───────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("update — успех")
@@ -194,7 +193,7 @@ class PublisherServiceTest {
         verify(repository, times(2)).findAll();
     }
 
-    // ─── delete ───────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("delete — успех, комиксы обнуляются")

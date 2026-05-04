@@ -58,7 +58,7 @@ class ReviewServiceTest {
         testReview.setComic(testComic);
     }
 
-    // ─── getAllReviews ────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("getAllReviews — кэш пуст, запрос к БД")
@@ -94,7 +94,7 @@ class ReviewServiceTest {
         assertTrue(reviewService.getAllReviews().isEmpty());
     }
 
-    // ─── getById ──────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("getById — успех")
@@ -129,7 +129,7 @@ class ReviewServiceTest {
             () -> reviewService.getById(99L));
     }
 
-    // ─── getReviewsByComicId ──────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("getReviewsByComicId — успех")
@@ -153,7 +153,7 @@ class ReviewServiceTest {
         verify(reviewRepository, times(1)).findByComicId(1L);
     }
 
-    // ─── addReviewToComic ─────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("addReviewToComic — успех")
@@ -180,7 +180,7 @@ class ReviewServiceTest {
             () -> reviewService.addReviewToComic(request));
     }
 
-    // ─── update ───────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("update — успех")
@@ -210,7 +210,7 @@ class ReviewServiceTest {
             () -> reviewService.update(99L, request));
     }
 
-    // ─── delete ───────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("delete — успех")
@@ -231,7 +231,7 @@ class ReviewServiceTest {
             () -> reviewService.delete(99L));
     }
 
-    // ─── patch ────────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("patch — обновляет text и rating")

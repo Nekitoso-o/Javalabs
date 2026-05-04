@@ -45,7 +45,7 @@ class GenreServiceTest {
         testGenre.setName("Сёнэн");
     }
 
-    // ─── getAll ───────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("getAll — кэш пуст, запрос к БД")
@@ -79,7 +79,7 @@ class GenreServiceTest {
         assertTrue(genreService.getAll().isEmpty());
     }
 
-    // ─── getById ──────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("getById — успех")
@@ -113,7 +113,7 @@ class GenreServiceTest {
             () -> genreService.getById(99L));
     }
 
-    // ─── create ───────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("create — успех")
@@ -148,7 +148,7 @@ class GenreServiceTest {
         verify(repository, times(2)).findAll();
     }
 
-    // ─── update ───────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("update — успех")
@@ -194,7 +194,7 @@ class GenreServiceTest {
         verify(repository, times(2)).findAll();
     }
 
-    // ─── delete ───────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("delete — успех, комикс отвязывается от жанра")

@@ -45,7 +45,7 @@ class AuthorServiceTest {
         testAuthor.setName("Акира Торияма");
     }
 
-    // ─── getAll ───────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("getAll — кэш пуст, запрос к БД")
@@ -80,7 +80,6 @@ class AuthorServiceTest {
         assertTrue(authorService.getAll().isEmpty());
     }
 
-    // ─── getById ──────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("getById — успех")
@@ -114,7 +113,6 @@ class AuthorServiceTest {
             () -> authorService.getById(99L));
     }
 
-    // ─── create ───────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("create — успех")
@@ -150,7 +148,6 @@ class AuthorServiceTest {
         verify(repository, times(2)).findAll();
     }
 
-    // ─── update ───────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("update — успех")
@@ -197,7 +194,7 @@ class AuthorServiceTest {
         verify(repository, times(2)).findAll();
     }
 
-    // ─── delete ───────────────────────────────────────────────────────────────
+
 
     @Test
     @DisplayName("delete — успех, комиксы обнуляются")
