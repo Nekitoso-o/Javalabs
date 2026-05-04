@@ -68,14 +68,13 @@ public class ComicBulkService {
 
                 return comicMapper.toDto(saved);
             })
-            .collect(Collectors.toList());
+            .toList(); // ← Исправлено: collect(Collectors.toList()) → toList()
 
         cacheManager.invalidate();
         LOG.info("Bulk-создание завершено: создано {} комиксов", created.size());
 
         return new BulkComicResult(created, created.size());
     }
-
 
     private Comic buildComic(int index, ComicRequest request) {
 
@@ -98,12 +97,12 @@ public class ComicBulkService {
 
                 Set<Long> foundIds = found.stream()
                     .map(Genre::getId)
-                    .collect(Collectors.toSet());
+                    .collect(Collectors.toSet()); // ← Set — оставляем Collectors.toSet()
 
                 List<Long> missingIds = ids.stream()
                     .filter(id -> !foundIds.contains(id))
                     .sorted()
-                    .collect(Collectors.toList());
+                    .toList(); // ← Исправлено: collect(Collectors.toList()) → toList()
 
                 if (!missingIds.isEmpty()) {
                     throw new IllegalArgumentException(
@@ -111,7 +110,8 @@ public class ComicBulkService {
                             + missingIds + " не найдены");
                 }
 
-                return found.stream().collect(Collectors.toSet());
+                return found.stream()
+                    .collect(Collectors.toSet()); // ← Set — оставляем Collectors.toSet()
             })
             .orElseThrow(() -> new IllegalArgumentException(
                 ELEMENT_PREFIX + index

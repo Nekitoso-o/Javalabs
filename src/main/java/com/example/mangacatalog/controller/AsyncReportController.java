@@ -14,6 +14,9 @@ import java.util.UUID;
 @Tag(name = "Асинхронные отчёты", description = "Демонстрация @Async / CompletableFuture")
 public class AsyncReportController {
 
+    // ← Константа вместо дублирования строки "taskId" 3 раза
+    private static final String TASK_ID_KEY = "taskId";
+
     private final AsyncReportService asyncReportService;
 
     public AsyncReportController(final AsyncReportService asyncReportService) {
@@ -27,7 +30,7 @@ public class AsyncReportController {
         asyncReportService.initTask(taskId);
         asyncReportService.processReportAsync(taskId);
         return ResponseEntity.accepted().body(Map.of(
-            "taskId", taskId,
+            TASK_ID_KEY, taskId,
             "message", "Отчёт генерируется. Проверьте /api/reports/status/" + taskId
         ));
     }
@@ -37,7 +40,7 @@ public class AsyncReportController {
     public ResponseEntity<Map<String, String>> getStatus(
         @PathVariable final String taskId) {
         return ResponseEntity.ok(Map.of(
-            "taskId", taskId,
+            TASK_ID_KEY, taskId,
             "status", asyncReportService.getStatus(taskId)
         ));
     }
@@ -47,7 +50,7 @@ public class AsyncReportController {
     public ResponseEntity<Map<String, String>> getResult(
         @PathVariable final String taskId) {
         return ResponseEntity.ok(Map.of(
-            "taskId", taskId,
+            TASK_ID_KEY, taskId,
             "result", asyncReportService.getResult(taskId)
         ));
     }
