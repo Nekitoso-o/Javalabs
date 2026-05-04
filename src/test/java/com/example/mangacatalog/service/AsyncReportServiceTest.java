@@ -38,7 +38,7 @@ class AsyncReportServiceTest {
         asyncReportService.initTask(TASK_ID);
     }
 
-    // ─── Тест 1: успешный сценарий ────────────────────────────────────────────
+
 
     @Test
     void processReportAsync_success() throws Exception {
@@ -49,7 +49,7 @@ class AsyncReportServiceTest {
         CompletableFuture<String> future =
             asyncReportService.processReportAsync(TASK_ID);
 
-        String result = future.get(); // ждём завершения
+        String result = future.get();
 
         assertTrue(result.contains("Комиксов - 10"));
         assertTrue(result.contains("Отзывов - 25"));
@@ -59,20 +59,17 @@ class AsyncReportServiceTest {
         assertEquals(result, asyncReportService.getResult(TASK_ID));
     }
 
-    // ─── Тест 2: покрытие catch (Exception) ───────────────────────────────────
+
 
     @Test
-    void processReportAsync_exceptionDuringCount_setsErrorStatus() throws Exception {
-        // Мок бросает RuntimeException при вызове count()
+    void processReportAsync_exceptionDuringCount_setsErrorStatus() {
         when(comicRepository.count()).thenThrow(new RuntimeException("DB error"));
 
         CompletableFuture<String> future =
             asyncReportService.processReportAsync(TASK_ID);
 
-        // future завершится с ошибкой
         assertTrue(future.isCompletedExceptionally());
 
-        // Статус задачи должен стать "Ошибка"
         ExecutionException ex = assertThrows(ExecutionException.class, future::get);
         assertTrue(ex.getCause() instanceof RuntimeException);
         assertEquals("DB error", ex.getCause().getMessage());
@@ -80,7 +77,7 @@ class AsyncReportServiceTest {
         assertEquals("Ошибка", asyncReportService.getStatus(TASK_ID));
     }
 
-    // ─── Тест 3: initTask и getStatus ─────────────────────────────────────────
+
 
     @Test
     void initTask_setsStatusInProcess() {
@@ -89,7 +86,7 @@ class AsyncReportServiceTest {
         assertEquals("В процессе", asyncReportService.getStatus(newTaskId));
     }
 
-    // ─── Тест 4: несуществующая задача ────────────────────────────────────────
+
 
     @Test
     void getStatus_unknownTask_returnsDefault() {

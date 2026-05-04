@@ -17,14 +17,14 @@ public class WebConfig {
     public WebMvcConfigurer webMvcConfigurer() {
         return new WebMvcConfigurer() {
             @Override
-
+            // CORS намеренно открыт для всех origins — учебный проект (dev-среда)
             public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/api/**")
+                registry.addMapping("/api/**")       // ← только /api/**, не все пути
                     .allowedOriginPatterns("*")
-                    .allowedMethods(ALLOWED_METHODS)
+                    .allowedMethods(ALLOWED_METHODS) // ← явный список методов вместо "*"
                     .allowedHeaders("*")
-                    .allowCredentials(false)
-                    .maxAge(3600);
+                    .allowCredentials(false)          // ← явно false, не допускаем куки
+                    .maxAge(3600);                    // ← кэш preflight на 1 час
             }
         };
     }
