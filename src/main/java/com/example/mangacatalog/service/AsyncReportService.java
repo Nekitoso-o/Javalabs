@@ -26,11 +26,10 @@ public class AsyncReportService {
     private final ReviewRepository reviewRepository;
     private final AuthorRepository authorRepository;
 
-    // Берётся из application.properties, по умолчанию 10000 мс
+
     @Value("${report.simulation.delay-ms:10000}")
     private int simulationDelayMs;
 
-    // Единственный конструктор — Spring autowiring работает корректно
     public AsyncReportService(ComicRepository comicRepository,
                               ReviewRepository reviewRepository,
                               AuthorRepository authorRepository) {

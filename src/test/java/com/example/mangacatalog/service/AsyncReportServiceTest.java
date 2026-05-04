@@ -70,8 +70,6 @@ class AsyncReportServiceTest {
         });
         runner.start();
 
-        Thread.sleep(100);
-
         runner.interrupt();
 
         runner.join(2000);
