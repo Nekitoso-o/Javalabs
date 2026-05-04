@@ -8,7 +8,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig {
 
-    // Разрешённые HTTP-методы для CORS
+    private static final String[] ALLOWED_ORIGINS = {
+        "http://localhost:8080",
+        "http://localhost:3000",
+        "http://127.0.0.1:8080"
+    };
+
     private static final String[] ALLOWED_METHODS = {
         "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
     };
@@ -17,14 +22,13 @@ public class WebConfig {
     public WebMvcConfigurer webMvcConfigurer() {
         return new WebMvcConfigurer() {
             @Override
-            // CORS намеренно открыт для всех origins — учебный проект (dev-среда)
             public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/api/**")       // ← только /api/**, не все пути
-                    .allowedOriginPatterns("*")
-                    .allowedMethods(ALLOWED_METHODS) // ← явный список методов вместо "*"
+                registry.addMapping("/api/**")
+                    .allowedOrigins(ALLOWED_ORIGINS)  // явные origins вместо "*"
+                    .allowedMethods(ALLOWED_METHODS)
                     .allowedHeaders("*")
-                    .allowCredentials(false)          // ← явно false, не допускаем куки
-                    .maxAge(3600);                    // ← кэш preflight на 1 час
+                    .allowCredentials(false)
+                    .maxAge(3600);
             }
         };
     }

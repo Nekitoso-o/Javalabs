@@ -6,9 +6,9 @@ import com.example.mangacatalog.repository.ReviewRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -19,86 +19,76 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AsyncReportServiceTest {
 
-    @Mock
-    private ComicRepository comicRepository;
+    @Mock private ComicRepository  comicRepository;
+    @Mock private ReviewRepository reviewRepository;
+    @Mock private AuthorRepository authorRepository;
 
-    @Mock
-    private ReviewRepository reviewRepository;
+    private AsyncReportService service;
 
-    @Mock
-    private AuthorRepository authorRepository;
-
-    @InjectMocks
-    private AsyncReportService asyncReportService;
-
-    private static final String TASK_ID = "test-task-123";
+    private static final String TASK_ID = "test-task";
 
     @BeforeEach
     void setUp() {
-        asyncReportService.initTask(TASK_ID);
+        service = new AsyncReportService(
+            comicRepository, reviewRepository, authorRepository
+        );
+        // Устанавливаем задержку 0 мс — тесты быстрые
+        // @Value не работает в unit-тестах без Spring контекста,
+        // поэтому используем ReflectionTestUtils
+        ReflectionTestUtils.setField(service, "simulationDelayMs", 0);
+        service.initTask(TASK_ID);
     }
 
-
-
+    // ── успешный сценарий ─────────────────────────────────────────────────────
     @Test
     void processReportAsync_success() throws Exception {
         when(comicRepository.count()).thenReturn(10L);
         when(reviewRepository.count()).thenReturn(25L);
         when(authorRepository.count()).thenReturn(5L);
 
-        CompletableFuture<String> future =
-            asyncReportService.processReportAsync(TASK_ID);
-
-        String result = future.get();
+        String result = service.processReportAsync(TASK_ID).get();
 
         assertTrue(result.contains("Комиксов - 10"));
         assertTrue(result.contains("Отзывов - 25"));
         assertTrue(result.contains("Авторов - 5"));
-
-        assertEquals("Завершено успешно", asyncReportService.getStatus(TASK_ID));
-        assertEquals(result, asyncReportService.getResult(TASK_ID));
+        assertEquals("Завершено успешно", service.getStatus(TASK_ID));
+        assertEquals(result, service.getResult(TASK_ID));
     }
 
-
-
+    // ── покрытие catch (Exception) ────────────────────────────────────────────
     @Test
-    void processReportAsync_exceptionDuringCount_setsErrorStatus() {
-        when(comicRepository.count()).thenThrow(new RuntimeException("DB error"));
+    void processReportAsync_exception_setsErrorStatus() {
+        when(comicRepository.count())
+            .thenThrow(new RuntimeException("DB недоступна"));
 
         CompletableFuture<String> future =
-            asyncReportService.processReportAsync(TASK_ID);
+            service.processReportAsync(TASK_ID);
 
         assertTrue(future.isCompletedExceptionally());
+        assertEquals("Ошибка", service.getStatus(TASK_ID));
 
-        ExecutionException ex = assertThrows(ExecutionException.class, future::get);
-        assertTrue(ex.getCause() instanceof RuntimeException);
-        assertEquals("DB error", ex.getCause().getMessage());
-
-        assertEquals("Ошибка", asyncReportService.getStatus(TASK_ID));
+        ExecutionException ex = assertThrows(
+            ExecutionException.class, future::get
+        );
+        assertEquals("DB недоступна", ex.getCause().getMessage());
     }
 
-
-
-    @Test
-    void initTask_setsStatusInProcess() {
-        String newTaskId = "another-task";
-        asyncReportService.initTask(newTaskId);
-        assertEquals("В процессе", asyncReportService.getStatus(newTaskId));
-    }
-
-
-
+    // ── статус по умолчанию ───────────────────────────────────────────────────
     @Test
     void getStatus_unknownTask_returnsDefault() {
-        assertEquals("Задача не найдена",
-            asyncReportService.getStatus("non-existent-id"));
+        assertEquals("Задача не найдена", service.getStatus("unknown"));
     }
 
+    // ── результат по умолчанию ────────────────────────────────────────────────
     @Test
     void getResult_unknownTask_returnsDefault() {
-        assertEquals("Результат еще не готов",
-            asyncReportService.getResult("non-existent-id"));
+        assertEquals("Результат еще не готов", service.getResult("unknown"));
     }
 
-
+    // ── initTask устанавливает статус ─────────────────────────────────────────
+    @Test
+    void initTask_setsInProgressStatus() {
+        service.initTask("new-task");
+        assertEquals("В процессе", service.getStatus("new-task"));
+    }
 }

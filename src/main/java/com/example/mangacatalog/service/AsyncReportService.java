@@ -5,6 +5,7 @@ import com.example.mangacatalog.repository.ComicRepository;
 import com.example.mangacatalog.repository.ReviewRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -15,22 +16,25 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class AsyncReportService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AsyncReportService.class);
-
-    private static final int SIMULATION_DELAY_MS = 10000;
+    private static final Logger LOG =
+        LoggerFactory.getLogger(AsyncReportService.class);
 
     private final Map<String, String> taskStatuses = new ConcurrentHashMap<>();
-    private final Map<String, String> taskResults = new ConcurrentHashMap<>();
+    private final Map<String, String> taskResults  = new ConcurrentHashMap<>();
 
     private final ComicRepository comicRepository;
     private final ReviewRepository reviewRepository;
     private final AuthorRepository authorRepository;
 
-    public AsyncReportService(
-        final ComicRepository comicRepository,
-        final ReviewRepository reviewRepository,
-        final AuthorRepository authorRepository) {
-        this.comicRepository = comicRepository;
+    // Берётся из application.properties, по умолчанию 10000 мс
+    @Value("${report.simulation.delay-ms:10000}")
+    private int simulationDelayMs;
+
+    // Единственный конструктор — Spring autowiring работает корректно
+    public AsyncReportService(ComicRepository comicRepository,
+                              ReviewRepository reviewRepository,
+                              AuthorRepository authorRepository) {
+        this.comicRepository  = comicRepository;
         this.reviewRepository = reviewRepository;
         this.authorRepository = authorRepository;
     }
@@ -43,9 +47,9 @@ public class AsyncReportService {
     public CompletableFuture<String> processReportAsync(final String taskId) {
         LOG.info("Сбор аналитики начался в фоне (Task ID: {})", taskId);
         try {
-            Thread.sleep(SIMULATION_DELAY_MS);
+            Thread.sleep(simulationDelayMs);
 
-            long comicsCount = comicRepository.count();
+            long comicsCount  = comicRepository.count();
             long reviewsCount = reviewRepository.count();
             long authorsCount = authorRepository.count();
 
@@ -59,12 +63,16 @@ public class AsyncReportService {
             LOG.info("Отчет сформирован (Task ID: {})", taskId);
 
             return CompletableFuture.completedFuture(result);
+
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             taskStatuses.put(taskId, "Прервано");
+            LOG.warn("Задача {} была прервана", taskId);
             return CompletableFuture.failedFuture(e);
+
         } catch (Exception e) {
             taskStatuses.put(taskId, "Ошибка");
+            LOG.error("Ошибка при генерации отчёта {}: {}", taskId, e.getMessage(), e);
             return CompletableFuture.failedFuture(e);
         }
     }
