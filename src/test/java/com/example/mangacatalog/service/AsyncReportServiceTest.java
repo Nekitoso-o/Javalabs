@@ -32,14 +32,12 @@ class AsyncReportServiceTest {
         service = new AsyncReportService(
             comicRepository, reviewRepository, authorRepository
         );
-        // Устанавливаем задержку 0 мс — тесты быстрые
-        // @Value не работает в unit-тестах без Spring контекста,
-        // поэтому используем ReflectionTestUtils
+
         ReflectionTestUtils.setField(service, "simulationDelayMs", 0);
         service.initTask(TASK_ID);
     }
 
-    // ── успешный сценарий ─────────────────────────────────────────────────────
+
     @Test
     void processReportAsync_success() throws Exception {
         when(comicRepository.count()).thenReturn(10L);
@@ -55,7 +53,33 @@ class AsyncReportServiceTest {
         assertEquals(result, service.getResult(TASK_ID));
     }
 
-    // ── покрытие catch (Exception) ────────────────────────────────────────────
+
+    @Test
+    void processReportAsync_interrupted_setsInterruptedStatus()
+        throws Exception {
+
+
+        ReflectionTestUtils.setField(service, "simulationDelayMs", 5000);
+
+        Thread[] workerThread = new Thread[1];
+        CompletableFuture<String>[] future = new CompletableFuture[1];
+
+        Thread runner = new Thread(() -> {
+            workerThread[0] = Thread.currentThread();
+            future[0] = service.processReportAsync(TASK_ID);
+        });
+        runner.start();
+
+        Thread.sleep(100);
+
+        runner.interrupt();
+
+        runner.join(2000);
+
+        assertEquals("Прервано", service.getStatus(TASK_ID));
+    }
+
+
     @Test
     void processReportAsync_exception_setsErrorStatus() {
         when(comicRepository.count())
@@ -73,19 +97,17 @@ class AsyncReportServiceTest {
         assertEquals("DB недоступна", ex.getCause().getMessage());
     }
 
-    // ── статус по умолчанию ───────────────────────────────────────────────────
     @Test
     void getStatus_unknownTask_returnsDefault() {
         assertEquals("Задача не найдена", service.getStatus("unknown"));
     }
 
-    // ── результат по умолчанию ────────────────────────────────────────────────
     @Test
     void getResult_unknownTask_returnsDefault() {
         assertEquals("Результат еще не готов", service.getResult("unknown"));
     }
 
-    // ── initTask устанавливает статус ─────────────────────────────────────────
+
     @Test
     void initTask_setsInProgressStatus() {
         service.initTask("new-task");
