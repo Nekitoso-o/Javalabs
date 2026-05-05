@@ -14,7 +14,6 @@ import java.util.UUID;
 @Tag(name = "Асинхронные отчёты", description = "Демонстрация @Async / CompletableFuture")
 public class AsyncReportController {
 
-    // ← Константа вместо дублирования строки "taskId" 3 раза
     private static final String TASK_ID_KEY = "taskId";
 
     private final AsyncReportService asyncReportService;
