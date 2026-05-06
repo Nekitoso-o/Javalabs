@@ -14,13 +14,14 @@ import com.example.mangacatalog.repository.PublisherRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Service
 public class ComicBulkService {
@@ -34,46 +35,64 @@ public class ComicBulkService {
     private final GenreRepository genreRepository;
     private final ComicMapper comicMapper;
     private final ApiCacheManager cacheManager;
+    private final ComicBulkService self;
 
     public ComicBulkService(ComicRepository comicRepository,
                             AuthorRepository authorRepository,
                             PublisherRepository publisherRepository,
                             GenreRepository genreRepository,
                             ComicMapper comicMapper,
-                            ApiCacheManager cacheManager) {
+                            ApiCacheManager cacheManager,
+                            ComicBulkService self) {
         this.comicRepository = comicRepository;
         this.authorRepository = authorRepository;
         this.publisherRepository = publisherRepository;
         this.genreRepository = genreRepository;
         this.comicMapper = comicMapper;
         this.cacheManager = cacheManager;
+        this.self = self;
     }
 
-    @Transactional
+
     public BulkComicResult createBulk(List<ComicRequest> requests) {
         LOG.info("Bulk-создание старт: {} элементов", requests.size());
 
-        List<ComicDto> created = IntStream.range(0, requests.size())
-            .mapToObj(index -> {
-                ComicRequest request = requests.get(index);
-                LOG.debug("Bulk [{}]: обработка комикса '{}'", index, request.title());
+        List<ComicDto> created = new ArrayList<>();
+        List<BulkErrorItem> errors = new ArrayList<>();
 
-                Comic comic = buildComic(index, request);
-                Comic saved = comicRepository.save(comic);
+        for (int index = 0; index < requests.size(); index++) {
+            ComicRequest request = requests.get(index);
+            LOG.debug("Bulk [{}]: обработка комикса '{}'", index, request.title());
 
-                LOG.debug("Bulk [{}]: save() вызван, ID={} — "
-                        + "с @Transactional: ещё не зафиксировано в БД; "
-                        + "без @Transactional: уже зафиксировано в БД",
-                    index, saved.getId());
+            try {
+                // Каждый save выполняется в отдельной транзакции (REQUIRES_NEW)
+                ComicDto saved = self.saveSingleComic(index, request);
+                created.add(saved);
+                LOG.debug("Bulk [{}]: комикс '{}' успешно сохранён, ID={}",
+                    index, request.title(), saved.id());
+            } catch (Exception ex) {
+                LOG.warn("Bulk [{}]: ошибка при сохранении '{}': {}",
+                    index, request.title(), ex.getMessage());
+                errors.add(new BulkErrorItem(index, request.title(), ex.getMessage()));
+            }
+        }
 
-                return comicMapper.toDto(saved);
-            })
-            .toList();
+        if (!created.isEmpty()) {
+            cacheManager.invalidate();
+        }
 
-        cacheManager.invalidate();
-        LOG.info("Bulk-создание завершено: создано {} комиксов", created.size());
+        LOG.info("Bulk-создание завершено: создано={}, ошибок={}",
+            created.size(), errors.size());
 
-        return new BulkComicResult(created, created.size());
+        return new BulkComicResult(created, created.size(), errors);
+    }
+
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public ComicDto saveSingleComic(int index, ComicRequest request) {
+        Comic comic = buildComic(index, request);
+        Comic saved = comicRepository.save(comic);
+        return comicMapper.toDto(saved);
     }
 
     private Comic buildComic(int index, ComicRequest request) {
@@ -110,8 +129,7 @@ public class ComicBulkService {
                             + missingIds + " не найдены");
                 }
 
-                return found.stream()
-                    .collect(Collectors.toSet());
+                return found.stream().collect(Collectors.toSet());
             })
             .orElseThrow(() -> new IllegalArgumentException(
                 ELEMENT_PREFIX + index

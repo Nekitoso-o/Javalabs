@@ -9,5 +9,8 @@ public record BulkComicResult(
     List<ComicDto> created,
 
     @Schema(description = "Количество созданных комиксов")
-    int successCount
+    int successCount,
+
+    @Schema(description = "Элементы с ошибками")
+    List<BulkErrorItem> errors
 ) {}
