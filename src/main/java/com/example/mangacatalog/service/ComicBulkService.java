@@ -49,11 +49,7 @@ public class ComicBulkService {
         this.cacheManager = cacheManager;
     }
 
-    // ДЛЯ ДЕМОНСТРАЦИИ:
-    // 1. Оставьте @Transactional. Отправьте 2 комикса (1 правильный, 2 с ошибкой).
-    //    Итог: метод выбросит исключение, Spring откатит БД. Первый комикс НЕ сохранится.
-    // 2. Уберите @Transactional. Отправьте те же данные.
-    //    Итог: метод тоже выбросит ошибку, но первый комикс УЖЕ будет в БД.
+
     @Transactional
     public BulkComicResult createBulk(List<ComicRequest> requests) {
         LOG.info("Bulk-создание старт: {} элементов", requests.size());
@@ -64,11 +60,9 @@ public class ComicBulkService {
             ComicRequest request = requests.get(i);
             LOG.debug("Bulk [{}]: обработка комикса '{}'", i, request.title());
 
-            // Если метод buildComic не найдёт автора/жанр, он выбросит IllegalArgumentException
             Comic comic = buildComic(i, request);
 
-            // Если @Transactional нет, этот save() мгновенно запишется в БД.
-            // Если @Transactional есть, этот save() "ждет" завершения всего метода.
+
             Comic saved = comicRepository.save(comic);
 
             LOG.debug("Bulk [{}]: save() вызван, ID={}", i, saved.getId());
