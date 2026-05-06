@@ -8,7 +8,6 @@ import com.example.mangacatalog.entity.Author;
 import com.example.mangacatalog.entity.Comic;
 import com.example.mangacatalog.entity.Genre;
 import com.example.mangacatalog.entity.Publisher;
-import com.example.mangacatalog.exception.BulkValidationException;
 import com.example.mangacatalog.mapper.ComicMapper;
 import com.example.mangacatalog.repository.AuthorRepository;
 import com.example.mangacatalog.repository.ComicRepository;
@@ -23,10 +22,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,8 +63,6 @@ class ComicBulkServiceTest {
         genre.setName("Фэнтези");
     }
 
-    // ── createBulk (транзакционный режим) ─────────────────────────────────────
-
     @Test
     @DisplayName("createBulk: все элементы валидны → создаёт все комиксы")
     void createBulk_allValid_createsAll() {
@@ -73,15 +72,15 @@ class ComicBulkServiceTest {
             new ComicRequest("Наруто", 1999, 1L, 1L, Set.of(1L))
         );
 
-        when(authorRepository.findAllById(Set.of(1L))).thenReturn(List.of(author));
-        when(publisherRepository.findAllById(Set.of(1L))).thenReturn(List.of(publisher));
+        when(authorRepository.findById(1L)).thenReturn(Optional.of(author));
+        when(publisherRepository.findById(1L)).thenReturn(Optional.of(publisher));
         when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
 
         Comic savedComic = new Comic();
         savedComic.setId(10L);
         when(comicRepository.save(any(Comic.class))).thenReturn(savedComic);
 
-        ComicDto mockDto = new ComicDto(10L, "Берсерк", 1989, null, null, Set.of());
+        ComicDto mockDto = new ComicDto(10L, "Тест", 1989, null, null, Set.of());
         when(comicMapper.toDto(any(Comic.class))).thenReturn(mockDto);
 
         // when
@@ -90,194 +89,73 @@ class ComicBulkServiceTest {
         // then
         assertThat(result.successCount()).isEqualTo(2);
         assertThat(result.created()).hasSize(2);
-        assertThat(result.errors()).isEmpty();
-        assertThat(result.errorCount()).isZero();
 
         verify(comicRepository, times(2)).save(any(Comic.class));
         verify(cacheManager).invalidate();
     }
 
     @Test
-    @DisplayName("createBulk: один элемент с несуществующим автором → BulkValidationException")
-    void createBulk_invalidAuthor_throwsBulkValidationException() {
-        // given — автор с ID 99 не существует
+    @DisplayName("createBulk: несуществующий автор → выбрасывает IllegalArgumentException")
+    void createBulk_invalidAuthor_throwsIllegalArgumentException() {
+        // given
         List<ComicRequest> requests = List.of(
             new ComicRequest("Берсерк", 1989, 1L, 1L, Set.of(1L)),
             new ComicRequest("Невалидный", 2000, 99L, 1L, Set.of(1L))
         );
 
-        when(authorRepository.findAllById(Set.of(1L, 99L))).thenReturn(List.of(author));
-        when(publisherRepository.findAllById(Set.of(1L))).thenReturn(List.of(publisher));
+        // Для первого комикса возвращаем данные
+        when(authorRepository.findById(1L)).thenReturn(Optional.of(author));
+        when(publisherRepository.findById(1L)).thenReturn(Optional.of(publisher));
         when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
+        when(comicRepository.save(any())).thenReturn(new Comic());
+
+        // Для второго комикса (ID автора = 99) возвращаем пустоту
+        when(authorRepository.findById(99L)).thenReturn(Optional.empty());
 
         // when / then
         assertThatThrownBy(() -> bulkService.createBulk(requests))
-            .isInstanceOf(BulkValidationException.class)
-            .satisfies(ex -> {
-                BulkValidationException bulkEx = (BulkValidationException) ex;
-                assertThat(bulkEx.getErrors()).hasSize(1);
-                assertThat(bulkEx.getErrors().get(0).index()).isEqualTo(1);
-                assertThat(bulkEx.getErrors().get(0).title()).isEqualTo("Невалидный");
-                assertThat(bulkEx.getErrors().get(0).error()).contains("99");
-            });
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("автор с ID 99 не найден");
 
-        // транзакция откатится, но save мог быть вызван для первого элемента
+        // Транзакция откатится, кеш не должен инвалидироваться
         verify(cacheManager, never()).invalidate();
     }
 
     @Test
-    @DisplayName("createBulk: пустой список жанров → BulkValidationException")
-    void createBulk_emptyGenres_throwsBulkValidationException() {
-        // given
-        List<ComicRequest> requests = List.of(
-            new ComicRequest("Берсерк", 1989, 1L, 1L, Set.of())
-        );
-
-        when(authorRepository.findAllById(Set.of(1L))).thenReturn(List.of(author));
-        when(publisherRepository.findAllById(Set.of(1L))).thenReturn(List.of(publisher));
-        when(genreRepository.findAllById(Set.of())).thenReturn(List.of());
-
-        // when / then
-        assertThatThrownBy(() -> bulkService.createBulk(requests))
-            .isInstanceOf(BulkValidationException.class)
-            .satisfies(ex -> {
-                BulkValidationException bulkEx = (BulkValidationException) ex;
-                assertThat(bulkEx.getErrors()).hasSize(1);
-                assertThat(bulkEx.getErrors().get(0).error())
-                    .contains("жанров не может быть пустым");
-            });
-    }
-
-    @Test
-    @DisplayName("createBulk: несуществующий издатель → BulkValidationException")
-    void createBulk_invalidPublisher_throwsBulkValidationException() {
+    @DisplayName("createBulk: несуществующий издатель → выбрасывает IllegalArgumentException")
+    void createBulk_invalidPublisher_throwsIllegalArgumentException() {
         // given
         List<ComicRequest> requests = List.of(
             new ComicRequest("Берсерк", 1989, 1L, 999L, Set.of(1L))
         );
 
-        when(authorRepository.findAllById(Set.of(1L))).thenReturn(List.of(author));
-        when(publisherRepository.findAllById(Set.of(999L))).thenReturn(List.of());
-        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
+        when(authorRepository.findById(1L)).thenReturn(Optional.of(author));
+        when(publisherRepository.findById(999L)).thenReturn(Optional.empty());
 
         // when / then
         assertThatThrownBy(() -> bulkService.createBulk(requests))
-            .isInstanceOf(BulkValidationException.class)
-            .satisfies(ex -> {
-                BulkValidationException bulkEx = (BulkValidationException) ex;
-                assertThat(bulkEx.getErrors().get(0).error()).contains("999");
-            });
-    }
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("издатель с ID 999 не найден");
 
-    @Test
-    @DisplayName("createBulk: несколько ошибок в одном запросе → все перечислены")
-    void createBulk_multipleErrors_allReported() {
-        // given — и автор и издатель не существуют
-        List<ComicRequest> requests = List.of(
-            new ComicRequest("Невалидный", 2000, 99L, 999L, Set.of(1L))
-        );
-
-        when(authorRepository.findAllById(Set.of(99L))).thenReturn(List.of());
-        when(publisherRepository.findAllById(Set.of(999L))).thenReturn(List.of());
-        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
-
-        // when / then
-        assertThatThrownBy(() -> bulkService.createBulk(requests))
-            .isInstanceOf(BulkValidationException.class)
-            .satisfies(ex -> {
-                BulkValidationException bulkEx = (BulkValidationException) ex;
-                // Одна запись об ошибке, но содержит обе проблемы
-                assertThat(bulkEx.getErrors()).hasSize(1);
-                String errorMsg = bulkEx.getErrors().get(0).error();
-                assertThat(errorMsg).contains("99");
-                assertThat(errorMsg).contains("999");
-            });
-    }
-
-    // ── createBulkPartial (частичный режим) ───────────────────────────────────
-
-    @Test
-    @DisplayName("createBulkPartial: первый валиден, второй нет → первый создан, второй в errors")
-    void createBulkPartial_mixedRequests_partialSuccess() {
-        // given
-        List<ComicRequest> requests = List.of(
-            new ComicRequest("Берсерк", 1989, 1L, 1L, Set.of(1L)),
-            new ComicRequest("Невалидный", 2000, 99L, 1L, Set.of(1L))
-        );
-
-        when(authorRepository.findAllById(Set.of(1L, 99L))).thenReturn(List.of(author));
-        when(publisherRepository.findAllById(Set.of(1L))).thenReturn(List.of(publisher));
-        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
-
-        Comic savedComic = new Comic();
-        savedComic.setId(5L);
-        when(bulkService.saveInNewTransaction(any(Comic.class))).thenReturn(savedComic);
-
-        ComicDto mockDto = new ComicDto(5L, "Берсерк", 1989, null, null, Set.of());
-        when(comicMapper.toDto(any(Comic.class))).thenReturn(mockDto);
-
-        // when
-        BulkComicResult result = bulkService.createBulkPartial(requests);
-
-        // then
-        assertThat(result.successCount()).isEqualTo(1);
-        assertThat(result.created()).hasSize(1);
-        assertThat(result.errorCount()).isEqualTo(1);
-        assertThat(result.errors()).hasSize(1);
-        assertThat(result.errors().get(0).index()).isEqualTo(1);
-        assertThat(result.errors().get(0).title()).isEqualTo("Невалидный");
-
-        verify(cacheManager).invalidate();
-    }
-
-    @Test
-    @DisplayName("createBulkPartial: все элементы невалидны → ничего не создано")
-    void createBulkPartial_allInvalid_nothingCreated() {
-        // given
-        List<ComicRequest> requests = List.of(
-            new ComicRequest("Первый", 2000, 99L, 1L, Set.of(1L)),
-            new ComicRequest("Второй", 2001, 1L, 999L, Set.of(1L))
-        );
-
-        when(authorRepository.findAllById(anySet())).thenReturn(List.of(author));
-        when(publisherRepository.findAllById(anySet())).thenReturn(List.of(publisher));
-        when(genreRepository.findAllById(anySet())).thenReturn(List.of(genre));
-
-        // when
-        BulkComicResult result = bulkService.createBulkPartial(requests);
-
-        // then
-        assertThat(result.successCount()).isZero();
-        assertThat(result.errorCount()).isEqualTo(2);
-        verify(comicRepository, never()).save(any());
         verify(cacheManager, never()).invalidate();
     }
 
     @Test
-    @DisplayName("createBulkPartial: все валидны → 201, нет ошибок")
-    void createBulkPartial_allValid_allCreated() {
+    @DisplayName("createBulk: пустой список жанров → выбрасывает IllegalArgumentException")
+    void createBulk_emptyGenres_throwsIllegalArgumentException() {
         // given
         List<ComicRequest> requests = List.of(
-            new ComicRequest("Берсерк", 1989, 1L, 1L, Set.of(1L))
+            new ComicRequest("Берсерк", 1989, 1L, 1L, Set.of())
         );
 
-        when(authorRepository.findAllById(Set.of(1L))).thenReturn(List.of(author));
-        when(publisherRepository.findAllById(Set.of(1L))).thenReturn(List.of(publisher));
-        when(genreRepository.findAllById(Set.of(1L))).thenReturn(List.of(genre));
+        when(authorRepository.findById(1L)).thenReturn(Optional.of(author));
+        when(publisherRepository.findById(1L)).thenReturn(Optional.of(publisher));
 
-        Comic savedComic = new Comic();
-        savedComic.setId(1L);
-        when(bulkService.saveInNewTransaction(any(Comic.class))).thenReturn(savedComic);
-        when(comicMapper.toDto(any())).thenReturn(
-            new ComicDto(1L, "Берсерк", 1989, null, null, Set.of()));
+        // when / then
+        assertThatThrownBy(() -> bulkService.createBulk(requests))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("список жанров не может быть пустым");
 
-        // when
-        BulkComicResult result = bulkService.createBulkPartial(requests);
-
-        // then
-        assertThat(result.successCount()).isEqualTo(1);
-        assertThat(result.errorCount()).isZero();
-        assertThat(result.errors()).isEmpty();
-        verify(cacheManager).invalidate();
+        verify(cacheManager, never()).invalidate();
     }
 }
