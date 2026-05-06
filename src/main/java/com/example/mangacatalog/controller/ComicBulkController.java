@@ -25,33 +25,23 @@ public class ComicBulkController {
     @Operation(
         summary = "Массовое создание комиксов",
         description = """
-            Создаёт список комиксов. Каждый элемент сохраняется в отдельной транзакции.
+            Создаёт список комиксов. Демонстрирует роль @Transactional.
             
-            Ошибка в одном элементе НЕ откатывает уже сохранённые комиксы.
+            С @Transactional на методе сервиса (текущее состояние):
+              Все save() — в рамках ОДНОЙ транзакции.
+              Ошибка на любом элементе → полный откат → БД не изменена.
             
-            Возвращает:
-            - 201 Created — все элементы сохранены успешно
-            - 207 Multi-Status — часть сохранена, часть с ошибками
-            - 400 Bad Request — ни один не сохранён (все с ошибками)
+            Без @Transactional (убрать аннотацию из ComicBulkService.createBulk):
+              Каждый save() фиксируется немедленно.
+              Ошибка на N-м элементе → элементы 0..N-1 уже в БД, откатить нельзя.
             
-            Для демонстрации: передайте список где один элемент
-            содержит несуществующий authorId — остальные сохранятся в БД.
+            Для демонстрации: передайте список где последний элемент
+            содержит несуществующий authorId — и проверьте состояние БД.
             """
     )
     public ResponseEntity<BulkComicResult> createBulk(
         @Valid @RequestBody BulkComicRequest request) {
-
         BulkComicResult result = bulkService.createBulk(request.comics());
-
-        HttpStatus status;
-        if (result.errors().isEmpty()) {
-            status = HttpStatus.CREATED;
-        } else if (!result.created().isEmpty()) {
-            status = HttpStatus.MULTI_STATUS;
-        } else {
-            status = HttpStatus.BAD_REQUEST;
-        }
-
-        return ResponseEntity.status(status).body(result);
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 }

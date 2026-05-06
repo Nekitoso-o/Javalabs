@@ -1,5 +1,6 @@
 package com.example.mangacatalog.exception;
 
+import com.example.mangacatalog.dto.BulkComicResult;
 import com.example.mangacatalog.dto.ErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,14 +13,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-
     private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+
 
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ErrorResponse> handleCustomValidation(ValidationException ex) {
@@ -62,11 +65,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleJsonError(final HttpMessageNotReadableException ex) {
-        LOG.warn("Ошибка чтения JSON или неверный формат данных: {}", ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleJsonError(HttpMessageNotReadableException ex) {
+        LOG.warn("Ошибка чтения JSON: {}", ex.getMessage());
         ErrorResponse body = new ErrorResponse(
             HttpStatus.BAD_REQUEST.value(),
-            "Ошибка в формате JSON-запроса. Проверьте правильность заполнения полей и синтаксис.",
+            "Ошибка в формате JSON-запроса. Проверьте правильность заполнения полей.",
             LocalDateTime.now(),
             null
         );
@@ -78,7 +81,7 @@ public class GlobalExceptionHandler {
         LOG.warn("Запрошен несуществующий путь: {}", ex.getResourcePath());
         ErrorResponse body = new ErrorResponse(
             HttpStatus.NOT_FOUND.value(),
-            "Эндпоинт или файл не найден: " + ex.getResourcePath(),
+            "Эндпоинт не найден: " + ex.getResourcePath(),
             LocalDateTime.now(),
             null
         );
@@ -87,7 +90,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
-        LOG.warn("Ошибка bulk-операции: {}", ex.getMessage());
+        LOG.warn("IllegalArgumentException: {}", ex.getMessage());
         ErrorResponse body = new ErrorResponse(
             HttpStatus.BAD_REQUEST.value(),
             ex.getMessage(),
@@ -96,5 +99,4 @@ public class GlobalExceptionHandler {
         );
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
-
 }
