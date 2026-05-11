@@ -28,10 +28,6 @@ class AsyncReportServiceTest {
 
     private static final String TASK_ID = "test-task";
 
-    /**
-     * Меняем static final поле через рефлексию.
-     * Работает на JDK 8–17 (на 17+ нужен --add-opens).
-     */
     private void setSimulationDelay(int ms) throws Exception {
         Field field = AsyncReportService.class.getDeclaredField("SIMULATION_DELAY_MS");
         field.setAccessible(true);
