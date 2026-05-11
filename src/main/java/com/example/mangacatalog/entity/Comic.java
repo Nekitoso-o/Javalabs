@@ -39,6 +39,15 @@ public class Comic {
     @OneToMany(mappedBy = "comic", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
 
+    @OneToMany(mappedBy = "comic", cascade = CascadeType.ALL,
+        orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("sortOrder ASC")
+    private List<ComicImage> images = new ArrayList<>();
+
+    @OneToMany(mappedBy = "comic", cascade = CascadeType.ALL,
+        orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("chapterNumber ASC")
+    private List<ComicChapter> chapters = new ArrayList<>();
 
     public Comic() {
         super();
@@ -79,4 +88,10 @@ public class Comic {
         return reviews; }
     public void setReviews(List<Review> reviews) {
         this.reviews = reviews; }
+
+    public List<ComicImage> getImages() { return images; }
+    public void setImages(List<ComicImage> images) { this.images = images; }
+
+    public List<ComicChapter> getChapters() { return chapters; }
+    public void setChapters(List<ComicChapter> chapters) { this.chapters = chapters; }
 }

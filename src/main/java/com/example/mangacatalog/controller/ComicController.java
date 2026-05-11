@@ -51,13 +51,13 @@ public class ComicController {
     @GetMapping("/complex-search")
     @Operation(summary = "Сложный поиск (Жанр + Год) с пагинацией и кэшированием")
     public List<ComicDto> searchComplex(
-        @RequestParam("genreName") String genreName,
-        @RequestParam("minYear") Integer minYear,
+        @RequestParam(value = "genreName", required = false) String genreName,
+        @RequestParam(value = "minYear", required = false) Integer minYear,
         @RequestParam(value = "page", defaultValue = "0") int page,
-        @RequestParam(value = "size", defaultValue = "5") int size,
+        @RequestParam(value = "size", defaultValue = "100") int size,
         @RequestParam(value = "useNative", defaultValue = "false") boolean useNative) {
-        int safePage = Math.max(page, DEFAULT_PAGE);
-        int safeSize = size > 0 ? size : DEFAULT_SIZE;
+        int safePage = Math.max(page, 0);
+        int safeSize = size > 0 ? size : 100;
         return comicService.searchComplex(genreName, minYear, safePage, safeSize, useNative);
     }
 

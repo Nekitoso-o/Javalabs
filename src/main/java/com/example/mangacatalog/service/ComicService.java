@@ -125,7 +125,7 @@ public class ComicService {
         Object cached = cacheManager.get(key);
         if (cached != null) return (List<ComicDto>) cached;
 
-        LOG.info("Запрос к БД (useNative={})", useNative ? "true" : "false");
+        LOG.info("Запрос к БД (genreName={}, minYear={}, useNative={})", genreName, minYear, useNative);
         Pageable pageable = PageRequest.of(page, size);
         List<ComicDto> dtoList;
 

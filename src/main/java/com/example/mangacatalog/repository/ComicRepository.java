@@ -38,7 +38,7 @@ public interface ComicRepository extends JpaRepository<Comic, Long> {
         + "WHERE c.id IN ("
         + "  SELECT DISTINCT c2.id FROM Comic c2 "
         + "  LEFT JOIN c2.genres g "
-        + "  WHERE (:genreName IS NULL OR g.name = :genreName) "
+        + "  WHERE (:genreName IS NULL OR :genreName = '' OR g.name = :genreName) "
         + "  AND (:minYear IS NULL OR c2.releaseYear >= :minYear)"
         + ") "
         + "ORDER BY c.id")
@@ -59,13 +59,13 @@ public interface ComicRepository extends JpaRepository<Comic, Long> {
         + "LEFT JOIN publishers p ON c.publisher_id = p.id "
         + "LEFT JOIN comic_genres cg ON c.id = cg.comic_id "
         + "LEFT JOIN genres g ON cg.genre_id = g.id "
-        + "WHERE c.id IN ("
+        + "WHERE (:genreName IS NULL OR :genreName = '' OR c.id IN ("
         + "  SELECT c_inner.id FROM comics c_inner "
         + "  JOIN comic_genres cg_inner ON c_inner.id = cg_inner.comic_id "
         + "  JOIN genres g_inner ON cg_inner.genre_id = g_inner.id "
-        + "  WHERE (:genreName IS NULL OR g_inner.name = :genreName) "
-        + "  AND (:minYear IS NULL OR c_inner.release_year >= :minYear)"
-        + ") "
+        + "  WHERE g_inner.name = :genreName"
+        + ")) "
+        + "AND (:minYear IS NULL OR c.release_year >= :minYear) "
         + "GROUP BY c.id, c.title, c.release_year, a.id, a.name, p.id, p.name "
         + "ORDER BY c.id",
         nativeQuery = true)
@@ -74,5 +74,6 @@ public interface ComicRepository extends JpaRepository<Comic, Long> {
         @Param("minYear") Integer minYear,
         Pageable pageable
     );
+
 
 }
