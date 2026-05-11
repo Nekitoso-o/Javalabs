@@ -8,11 +8,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -28,11 +28,26 @@ class AsyncReportServiceTest {
 
     private static final String TASK_ID = "test-task";
 
+    /**
+     * Меняем static final поле через рефлексию.
+     * Работает на JDK 8–17 (на 17+ нужен --add-opens).
+     */
+    private void setSimulationDelay(int ms) throws Exception {
+        Field field = AsyncReportService.class.getDeclaredField("SIMULATION_DELAY_MS");
+        field.setAccessible(true);
+
+        // Снимаем final-модификатор
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
+        field.setInt(null, ms);
+    }
+
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         service = new AsyncReportService(comicRepository, reviewRepository, authorRepository);
-        // Убираем задержку для быстрого выполнения тестов
-        ReflectionTestUtils.setField(service, "simulationDelayMs", 0);
+        setSimulationDelay(0); // убираем задержку
         service.initTask(TASK_ID);
     }
 
@@ -47,7 +62,6 @@ class AsyncReportServiceTest {
     @Test
     void initTask_overwritesExistingStatus() {
         service.initTask(TASK_ID);
-        // Статус должен снова стать "В процессе"
         assertEquals("В процессе", service.getStatus(TASK_ID));
     }
 
@@ -61,12 +75,9 @@ class AsyncReportServiceTest {
 
         String result = service.processReportAsync(TASK_ID).get();
 
-        assertTrue(result.contains("Комиксов - 10"),
-            "Отчёт должен содержать количество комиксов");
-        assertTrue(result.contains("Отзывов - 25"),
-            "Отчёт должен содержать количество отзывов");
-        assertTrue(result.contains("Авторов - 5"),
-            "Отчёт должен содержать количество авторов");
+        assertTrue(result.contains("Комиксов - 10"));
+        assertTrue(result.contains("Отзывов - 25"));
+        assertTrue(result.contains("Авторов - 5"));
     }
 
     @Test
@@ -88,26 +99,22 @@ class AsyncReportServiceTest {
 
         String result = service.processReportAsync(TASK_ID).get();
 
-        assertEquals(result, service.getResult(TASK_ID),
-            "getResult должен вернуть тот же текст, что и CompletableFuture");
+        assertEquals(result, service.getResult(TASK_ID));
     }
 
     @Test
     void processReportAsync_exception_setsErrorStatus() {
-        when(comicRepository.count())
-            .thenThrow(new RuntimeException("DB недоступна"));
+        when(comicRepository.count()).thenThrow(new RuntimeException("DB недоступна"));
 
         CompletableFuture<String> future = service.processReportAsync(TASK_ID);
 
-        assertTrue(future.isCompletedExceptionally(),
-            "Future должен завершиться исключительно");
+        assertTrue(future.isCompletedExceptionally());
         assertEquals("Ошибка", service.getStatus(TASK_ID));
     }
 
     @Test
     void processReportAsync_exception_futureCauseMatchesOriginal() {
-        when(comicRepository.count())
-            .thenThrow(new RuntimeException("DB недоступна"));
+        when(comicRepository.count()).thenThrow(new RuntimeException("DB недоступна"));
 
         CompletableFuture<String> future = service.processReportAsync(TASK_ID);
 
@@ -116,23 +123,19 @@ class AsyncReportServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void processReportAsync_interrupted_setsInterruptedStatus() throws Exception {
-        // Устанавливаем задержку, чтобы успеть прервать поток
-        ReflectionTestUtils.setField(service, "simulationDelayMs", 5_000);
+        setSimulationDelay(5_000); // нужна реальная задержка
 
-        AtomicReference<CompletableFuture<String>> futureRef = new AtomicReference<>();
-        AtomicReference<Thread> workerRef = new AtomicReference<>();
+        CompletableFuture<String>[] holder = new CompletableFuture[1];
 
-        Thread runner = new Thread(() -> {
-            workerRef.set(Thread.currentThread());
-            futureRef.set(service.processReportAsync(TASK_ID));
-        });
-        runner.start();
+        Thread worker = new Thread(() ->
+            holder[0] = service.processReportAsync(TASK_ID));
+        worker.start();
 
-        // Ждём, пока поток войдёт в sleep
-        Thread.sleep(200);
-        runner.interrupt();
-        runner.join(3_000);
+        Thread.sleep(300);   // ждём входа в sleep
+        worker.interrupt();
+        worker.join(3_000);
 
         assertEquals("Прервано", service.getStatus(TASK_ID));
     }
@@ -158,7 +161,6 @@ class AsyncReportServiceTest {
 
     @Test
     void getResult_beforeCompletion_returnsNotReadyMessage() {
-        // Задача инициализирована, но processReportAsync не вызывался
         assertEquals("Результат еще не готов", service.getResult(TASK_ID));
     }
 }
