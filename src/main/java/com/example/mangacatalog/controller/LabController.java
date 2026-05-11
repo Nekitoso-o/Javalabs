@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -22,19 +23,20 @@ import java.util.concurrent.TimeUnit;
 @Tag(name = "Асинхронность и Многопоточность")
 public class LabController {
 
-    private static final String TASK_ID_KEY = "ID Задачи";
-    private static final int THREAD_COUNT = 50;
-    private static final int ITERATION_COUNT = 10000;
-    private static final int AWAIT_TIMEOUT_SECONDS = 20;
+    private static final String TASK_ID_KEY      = "ID Задачи";
+    private static final int    THREAD_COUNT     = 50;
+    private static final int    ITERATION_COUNT  = 10_000;
+    private static final int    AWAIT_TIMEOUT_SECONDS = 30;
 
     private final AsyncReportService asyncService;
     private final ConcurrencyService concurrencyService;
 
     public LabController(final AsyncReportService asyncService,
                          final ConcurrencyService concurrencyService) {
-        this.asyncService = asyncService;
+        this.asyncService      = asyncService;
         this.concurrencyService = concurrencyService;
     }
+
 
     @PostMapping("/async/start")
     @Operation(summary = "Запустить генерацию отчёта по БД")
@@ -44,7 +46,7 @@ public class LabController {
         asyncService.processReportAsync(taskId);
         return Map.of(
             TASK_ID_KEY, taskId,
-            "Сообщение", "Отчёт генерируется в фоне. Проверьте статус через 10 секунд."
+            "Сообщение", "Отчёт генерируется в фоне. Проверьте статус через 15 секунд."
         );
     }
 
@@ -66,49 +68,80 @@ public class LabController {
         );
     }
 
+
     @PostMapping("/concurrency/test")
     @Operation(
-        summary = "Демонстрация Race Condition (50 потоков)",
+        summary = "Демонстрация Race Condition (50 потоков × 10 000 итераций)",
         description = """
-            Запускает 50 потоков по 10 000 инкрементов каждый (ожидается: 500 000).
-            
-            Небезопасный (int++):   покажет < 500 000 — race condition!
-            synchronized:           покажет ровно 500 000 — корректно.
-            AtomicInteger:          покажет ровно 500 000 — корректно.
-            
-            ВНИМАНИЕ: блокирует HTTP-поток ~5-10 секунд.
+            Запускает 3 НЕЗАВИСИМЫХ теста в отдельных пулах потоков.
+            Каждый счётчик тестируется изолированно — результаты точные.
+
+            1. unsafeCounter  → покажет МЕНЬШЕ 500 000 (Race Condition).
+            2. synchronized   → ровно 500 000 (блокировка метода).
+            3. AtomicInteger  → ровно 500 000 (lock-free CAS операция).
+
+            ⚠️ Блокирует HTTP-поток ~5-10 секунд.
             """
     )
     public Map<String, Object> testConcurrency() throws InterruptedException {
         concurrencyService.resetCounters();
+        int expected = THREAD_COUNT * ITERATION_COUNT;
+
+        runIsolatedTest(concurrencyService::incrementUnsafe);
+        int unsafeResult = concurrencyService.getUnsafeCounter();
+
+
+        concurrencyService.resetCounters();
+        runIsolatedTest(concurrencyService::incrementSync);
+        int syncResult = concurrencyService.getSyncCounter();
+
+
+        concurrencyService.resetCounters();
+        runIsolatedTest(concurrencyService::incrementAtomic);
+        int atomicResult = concurrencyService.getAtomicCounter();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("Ожидаемое значение (потоков × итераций)",
+            THREAD_COUNT + " × " + ITERATION_COUNT + " = " + expected);
+
+        result.put("1. Небезопасный счётчик (Race Condition!)", unsafeResult);
+        result.put("   -> ПОТЕРЯНО ДАННЫХ", expected - unsafeResult);
+
+        result.put("2. Безопасный (synchronized)", syncResult);
+
+        result.put("3. Безопасный (AtomicInteger)", atomicResult);
+
+        return result;
+    }
+
+
+    private void runIsolatedTest(Runnable action) throws InterruptedException {
+        CountDownLatch startSignal = new CountDownLatch(1);
+        CountDownLatch doneLatch   = new CountDownLatch(THREAD_COUNT);
 
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
 
         for (int i = 0; i < THREAD_COUNT; i++) {
             executor.submit(() -> {
-                for (int j = 0; j < ITERATION_COUNT; j++) {
-                    concurrencyService.incrementUnsafe();
-                    concurrencyService.incrementSync();
-                    concurrencyService.incrementAtomic();
+                try {
+                    startSignal.await();
+                    for (int j = 0; j < ITERATION_COUNT; j++) {
+                        action.run();
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    doneLatch.countDown();
                 }
             });
         }
 
+        startSignal.countDown();
+        boolean finished = doneLatch.await(AWAIT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         executor.shutdown();
-        boolean terminated = executor.awaitTermination(AWAIT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-        if (!terminated) {
+
+        if (!finished) {
             executor.shutdownNow();
         }
-
-        int expected = THREAD_COUNT * ITERATION_COUNT;
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("Ожидаемое значение (" + THREAD_COUNT + " потоков * " + ITERATION_COUNT + " раз)", expected);
-        result.put("1. Небезопасный счётчик (Race Condition!)", concurrencyService.getUnsafeCounter());
-        result.put("   -> ПОТЕРЯНО ДАННЫХ", expected - concurrencyService.getUnsafeCounter());
-        result.put("2. Безопасный (synchronized)", concurrencyService.getSyncCounter());
-        result.put("3. Безопасный (AtomicInteger)", concurrencyService.getAtomicCounter());
-
-        return result;
     }
 }
