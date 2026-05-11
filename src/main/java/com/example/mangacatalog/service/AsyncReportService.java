@@ -5,6 +5,7 @@ import com.example.mangacatalog.repository.ComicRepository;
 import com.example.mangacatalog.repository.ReviewRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -17,19 +18,20 @@ public class AsyncReportService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AsyncReportService.class);
 
-    private static final int SIMULATION_DELAY_MS = 15000;
+    @Value("${app.report.delay-ms:15000}")
+    private int simulationDelayMs;
 
     private final Map<String, String> taskStatuses = new ConcurrentHashMap<>();
-    private final Map<String, String> taskResults = new ConcurrentHashMap<>();
+    private final Map<String, String> taskResults   = new ConcurrentHashMap<>();
 
-    private final ComicRepository comicRepository;
+    private final ComicRepository  comicRepository;
     private final ReviewRepository reviewRepository;
     private final AuthorRepository authorRepository;
 
-    public AsyncReportService(final ComicRepository comicRepository,
+    public AsyncReportService(final ComicRepository  comicRepository,
                               final ReviewRepository reviewRepository,
                               final AuthorRepository authorRepository) {
-        this.comicRepository = comicRepository;
+        this.comicRepository  = comicRepository;
         this.reviewRepository = reviewRepository;
         this.authorRepository = authorRepository;
     }
@@ -42,9 +44,9 @@ public class AsyncReportService {
     public CompletableFuture<String> processReportAsync(final String taskId) {
         LOG.info("Сбор аналитики начался в фоне (Task ID: {})", taskId);
         try {
-            Thread.sleep(SIMULATION_DELAY_MS);
+            Thread.sleep(simulationDelayMs);
 
-            long comicsCount = comicRepository.count();
+            long comicsCount  = comicRepository.count();
             long reviewsCount = reviewRepository.count();
             long authorsCount = authorRepository.count();
 

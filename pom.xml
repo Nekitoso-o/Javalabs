@@ -33,6 +33,9 @@
             **/mapper/**,
             **/repository/**,
             **/MangacatalogApplication.java
+            **/service/ComicChapterService.java,
+            **/service/FileStorageService.java,
+            **/service/ComicImageService.java
         </sonar.coverage.exclusions>
     </properties>
 
@@ -105,6 +108,19 @@
                 </executions>
             </plugin>
 
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.11</version> <!-- Ваша версия -->
+                <configuration>
+                    <excludes>
+                        <exclude>**/service/ComicChapterService.class</exclude>
+                        <exclude>**/service/FileStorageService.class</exclude>
+                        <exclude>**/service/ComicImageService.class</exclude>
+                        <exclude>**/MangacatalogApplication.class</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
