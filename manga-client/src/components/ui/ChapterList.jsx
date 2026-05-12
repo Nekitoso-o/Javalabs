@@ -102,8 +102,10 @@ function AddChapterModal({ comicId, onDone, onCancel, existingNumbers }) {
                                 multiple
                                 style={{ display: 'none' }}
                                 onChange={(e) => {
-                                    const arr = Array.from(e.target.files).filter(
-                                        (f) => f.type.startsWith('image/')
+                                    const arr = Array.from(
+                                        e.target.files
+                                    ).filter((f) =>
+                                        f.type.startsWith('image/')
                                     );
                                     if (arr.length) setFiles(arr);
                                     e.target.value = '';
@@ -131,26 +133,36 @@ function AddChapterModal({ comicId, onDone, onCancel, existingNumbers }) {
                                 </div>
                             ) : (
                                 <div className="chapter-dropzone__info">
-                                    <span
-                                        style={{ fontSize: 40, opacity: 0.4 }}
-                                    >
-                                        🖼️
-                                    </span>
-                                    <span>Перетащите страницы сюда</span>
-                                    <span
-                                        style={{
-                                            fontSize: 12,
-                                            color: 'var(--text-muted)',
-                                        }}
-                                    >
-                                        или нажмите для выбора
-                                    </span>
-                                    <span
-                                        style={{
-                                            fontSize: 11,
-                                            color: 'var(--text-muted)',
-                                        }}
-                                    >
+                                    <div className="chapter-dropzone__icon">
+                                        <svg
+                                            width="32"
+                                            height="32"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="1.5"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                            <polyline points="17 8 12 3 7 8" />
+                                            <line
+                                                x1="12"
+                                                y1="3"
+                                                x2="12"
+                                                y2="15"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <div className="chapter-dropzone__texts">
+                                        <span className="chapter-dropzone__main-text">
+                                            Выберите файлы
+                                        </span>
+                                        <span className="chapter-dropzone__sub-text">
+                                            или перетащите изображения сюда
+                                        </span>
+                                    </div>
+                                    <span className="chapter-dropzone__hint">
                                         JPG, PNG, WebP · до 20 MB каждый
                                     </span>
                                 </div>
@@ -272,15 +284,11 @@ export default function ChapterList({
         [comicId]
     );
 
-    // Автооткрытие первой главы при нажатии кнопки "Читать"
     useEffect(() => {
         if (!initialChapterId || chapters.length === 0) return;
-
         const target = chapters.find((ch) => ch.id === initialChapterId);
         if (!target) return;
-
         handleRead(target);
-
         if (onInitialChapterHandled) onInitialChapterHandled();
     }, [initialChapterId, chapters, handleRead, onInitialChapterHandled]);
 
@@ -301,10 +309,7 @@ export default function ChapterList({
         try {
             await comicChaptersApi.delete(comicId, chapter.id);
             load();
-            showAlert(
-                'success',
-                `✅ Глава ${chapter.chapterNumber} удалена`
-            );
+            showAlert('success', `✅ Глава ${chapter.chapterNumber} удалена`);
         } catch (err) {
             showAlert('error', `❌ ${err.message}`);
         } finally {
@@ -348,12 +353,8 @@ export default function ChapterList({
                 >
                     <span className="ch-toolbar__btn-icon">⇅</span>
                     Сортировать
-                    <span
-                        style={{ fontSize: 11, color: 'var(--text-muted)' }}
-                    >
-                        {sortDesc
-                            ? '(новые сначала)'
-                            : '(старые сначала)'}
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        {sortDesc ? '(новые сначала)' : '(старые сначала)'}
                     </span>
                 </button>
 
@@ -401,10 +402,7 @@ export default function ChapterList({
                                     <span className="ch-item__spinner" />
                                 ) : (
                                     <span
-                                        style={{
-                                            opacity: 0.4,
-                                            fontSize: 16,
-                                        }}
+                                        style={{ opacity: 0.4, fontSize: 16 }}
                                     >
                                         👁
                                     </span>
@@ -471,7 +469,7 @@ export default function ChapterList({
                 />
             )}
 
-            {/* Подтверждение удаления главы */}
+            {/* Подтверждение удаления */}
             {confirmDelete && (
                 <div
                     className="chapter-modal-overlay"
@@ -500,9 +498,7 @@ export default function ChapterList({
                             >
                                 Вы уверены, что хотите удалить{' '}
                                 <strong
-                                    style={{
-                                        color: 'var(--text-primary)',
-                                    }}
+                                    style={{ color: 'var(--text-primary)' }}
                                 >
                                     Главу {confirmDelete.chapterNumber}
                                     {confirmDelete.title &&
