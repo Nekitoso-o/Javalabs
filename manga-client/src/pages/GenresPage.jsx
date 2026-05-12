@@ -1,3 +1,4 @@
+// manga-client/src/pages/GenresPage.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { genresApi } from '../api/api.js';
@@ -43,12 +44,35 @@ function GenreModal({ initial, onSubmit, onCancel, loading }) {
     );
 }
 
+// --- Модалка подтверждения удаления ---
+function DeleteConfirmModal({ title, description, onConfirm, onCancel }) {
+    return (
+        <Modal title="🗑️ Подтверждение удаления" onClose={onCancel}>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>{title}</p>
+            {description && (
+                <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
+                    {description}
+                </p>
+            )}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button className="btn btn--ghost" onClick={onCancel}>
+                    Отмена
+                </button>
+                <button className="btn btn--danger" onClick={onConfirm}>
+                    🗑️ Удалить
+                </button>
+            </div>
+        </Modal>
+    );
+}
+
 export default function GenresPage() {
     const navigate = useNavigate();
     const { data: genres, loading, refetch } = useApi(genresApi.getAll);
     const [modal, setModal] = useState(null);
     const [saving, setSaving] = useState(false);
     const [alert, setAlert] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
 
     const showAlert = (type, text) => {
         setAlert({ type, text });
@@ -83,14 +107,16 @@ export default function GenresPage() {
         }
     };
 
-    const handleDelete = async (genre) => {
-        if (!window.confirm(`Удалить жанр «${genre.name}»?`)) return;
+    const handleDeleteConfirm = async () => {
+        if (!deleteTarget) return;
         try {
-            await genresApi.delete(genre.id);
-            showAlert('success', '✅ Жанр удалён');
+            await genresApi.delete(deleteTarget.id);
+            showAlert('error', `🗑️ Жанр «${deleteTarget.name}» удалён`);
             refetch();
         } catch (err) {
             showAlert('error', `❌ ${err.message}`);
+        } finally {
+            setDeleteTarget(null);
         }
     };
 
@@ -118,13 +144,11 @@ export default function GenresPage() {
             {loading ? (
                 <Spinner />
             ) : (
-                <div
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                        gap: 16,
-                    }}
-                >
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                    gap: 16,
+                }}>
                     {genres?.map((genre) => (
                         <div
                             key={genre.id}
@@ -139,26 +163,18 @@ export default function GenresPage() {
                                 transition: 'var(--transition)',
                             }}
                         >
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                }}
-                            >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Badge>{genre.name}</Badge>
                                 <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                  #{genre.id}
-                </span>
+                                    #{genre.id}
+                                </span>
                             </div>
 
                             <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
                                 <button
                                     className="btn btn--ghost btn--sm"
                                     style={{ flex: 1 }}
-                                    onClick={() =>
-                                        navigate(`/catalog?genre=${encodeURIComponent(genre.name)}`)
-                                    }
+                                    onClick={() => navigate(`/catalog?genre=${encodeURIComponent(genre.name)}`)}
                                 >
                                     📚 Смотреть
                                 </button>
@@ -170,7 +186,7 @@ export default function GenresPage() {
                                 </button>
                                 <button
                                     className="btn btn--danger btn--sm"
-                                    onClick={() => handleDelete(genre)}
+                                    onClick={() => setDeleteTarget(genre)}
                                 >
                                     🗑️
                                 </button>
@@ -198,6 +214,22 @@ export default function GenresPage() {
                         loading={saving}
                     />
                 </Modal>
+            )}
+
+            {deleteTarget && (
+                <DeleteConfirmModal
+                    title={
+                        <>
+                            Вы уверены, что хотите удалить жанр{' '}
+                            <strong style={{ color: 'var(--text-primary)' }}>
+                                «{deleteTarget.name}»
+                            </strong>?
+                        </>
+                    }
+                    description="Это действие необратимо. Жанр будет удалён из всех тайтлов, к которым он привязан."
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() => setDeleteTarget(null)}
+                />
             )}
         </div>
     );

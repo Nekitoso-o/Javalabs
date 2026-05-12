@@ -1,0 +1,35 @@
+# Артефакты сборки
+target/
+
+# IDE файлы
+.idea/
+*.iml
+.vscode/
+
+# Git
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Логи и результаты тестов
+logs/
+results/
+jmeter/
+jmeter.log
+
+# Фронтенд — не нужен в образе бэка
+manga-client/
+
+# Загруженные файлы — не включаем в образ
+uploads/
+
+# Документация
+*.md
+HELP.md
+
+# Maven wrapper (Windows)
+mvnw.cmd
+
+# Docker файлы самого проекта
+docker-compose.yml

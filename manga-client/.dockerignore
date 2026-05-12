@@ -1,0 +1,32 @@
+# Зависимости (устанавливаются внутри контейнера)
+node_modules/
+
+# Артефакты сборки
+dist/
+
+# Кэш Vite
+.vite/
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Логи
+*.log
+npm-debug.log*
+
+# Переменные окружения (не включаем секреты в образ)
+.env
+.env.local
+.env.*.local
+
+# Документация
+*.md
+
+# OS файлы
+.DS_Store
+Thumbs.db

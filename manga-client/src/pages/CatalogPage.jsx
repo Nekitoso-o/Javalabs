@@ -8,6 +8,8 @@ import Modal from '../components/ui/Modal.jsx';
 import ComicForm from '../components/forms/ComicForm.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 
+const PAGE_SIZE = 12; // Количество карточек на странице
+
 // --- Кастомный прокручиваемый выпадающий список ---
 function CustomDropdown({ value, onChange, options, placeholder, className }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -42,16 +44,14 @@ function CustomDropdown({ value, onChange, options, placeholder, className }) {
             </div>
 
             {isOpen && (
-                <div
-                    style={{
-                        position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                        maxHeight: 220, overflowY: 'auto',
-                        background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius)', zIndex: 9999,
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                        display: 'flex', flexDirection: 'column'
-                    }}
-                >
+                <div style={{
+                    position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                    maxHeight: 220, overflowY: 'auto',
+                    background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius)', zIndex: 9999,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                    display: 'flex', flexDirection: 'column'
+                }}>
                     <div
                         className="cd-item"
                         onClick={() => { onChange(''); setIsOpen(false); }}
@@ -73,6 +73,107 @@ function CustomDropdown({ value, onChange, options, placeholder, className }) {
         </div>
     );
 }
+
+// --- Компонент пагинации ---
+function Pagination({ currentPage, totalPages, onChange }) {
+    if (totalPages <= 1) return null;
+
+    // Строим массив кнопок с "..." где нужно
+    const getPages = () => {
+        const pages = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (currentPage > 3) pages.push('...');
+            for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+                pages.push(i);
+            }
+            if (currentPage < totalPages - 2) pages.push('...');
+            pages.push(totalPages);
+        }
+        return pages;
+    };
+
+    return (
+        <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 6,
+            marginTop: 32,
+            flexWrap: 'wrap',
+        }}>
+            {/* Кнопка "Назад" */}
+            <button
+                onClick={() => onChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                style={{
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-secondary)',
+                    color: currentPage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: 14,
+                    transition: 'var(--transition)',
+                }}
+            >
+                ← Назад
+            </button>
+
+            {/* Номера страниц */}
+            {getPages().map((page, idx) =>
+                page === '...' ? (
+                    <span
+                        key={`dots-${idx}`}
+                        style={{ color: 'var(--text-muted)', padding: '0 4px', fontSize: 14 }}
+                    >
+                        ...
+                    </span>
+                ) : (
+                    <button
+                        key={page}
+                        onClick={() => onChange(page)}
+                        style={{
+                            padding: '8px 14px',
+                            borderRadius: 'var(--radius)',
+                            border: '1px solid',
+                            borderColor: currentPage === page ? 'var(--accent)' : 'var(--border)',
+                            background: currentPage === page ? 'var(--accent)' : 'var(--bg-secondary)',
+                            color: currentPage === page ? '#fff' : 'var(--text-primary)',
+                            cursor: 'pointer',
+                            fontWeight: currentPage === page ? 700 : 400,
+                            fontSize: 14,
+                            minWidth: 38,
+                            transition: 'var(--transition)',
+                        }}
+                    >
+                        {page}
+                    </button>
+                )
+            )}
+
+            {/* Кнопка "Вперед" */}
+            <button
+                onClick={() => onChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                style={{
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-secondary)',
+                    color: currentPage === totalPages ? 'var(--text-muted)' : 'var(--text-primary)',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontSize: 14,
+                    transition: 'var(--transition)',
+                }}
+            >
+                Вперёд →
+            </button>
+        </div>
+    );
+}
 // --------------------------------------------------
 
 export default function CatalogPage() {
@@ -81,6 +182,7 @@ export default function CatalogPage() {
     const [comics, setComics] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
 
     const [titleFilter, setTitleFilter] = useState(searchParams.get('search') || '');
     const [genreFilter, setGenreFilter] = useState(searchParams.get('genre') || '');
@@ -95,6 +197,12 @@ export default function CatalogPage() {
     const { data: genres } = useApi(genresApi.getAll);
     const { data: authors } = useApi(authorsApi.getAll);
 
+    // Если URL изменился из-за поиска в шапке — обновляем стейт
+    useEffect(() => {
+        const query = searchParams.get('search') || '';
+        if (query !== titleFilter) setTitleFilter(query);
+    }, [searchParams]);
+
     const loadComics = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -107,7 +215,7 @@ export default function CatalogPage() {
                     genreName: genreFilter || undefined,
                     minYear: yearFilter ? Number(yearFilter) : undefined,
                     page: 0,
-                    size: 200,
+                    size: 9999,
                 });
             } else if (titleFilter) {
                 data = await comicsApi.search(titleFilter);
@@ -115,6 +223,7 @@ export default function CatalogPage() {
                 data = await comicsApi.getAll();
             }
             setComics(data);
+            setCurrentPage(1); // Сбрасываем на первую страницу при новом поиске
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Ошибка загрузки');
         } finally {
@@ -161,6 +270,7 @@ export default function CatalogPage() {
         setYearFilter('');
         setAuthorFilterId('');
         setAuthorFilterName('');
+        setCurrentPage(1);
     };
 
     const handleAuthorChange = (selectedId) => {
@@ -175,29 +285,42 @@ export default function CatalogPage() {
             setGenreFilter('');
             setYearFilter('');
         }
-    };
-
-    const handleTitleChange = (v) => {
-        setTitleFilter(v);
-        if (authorFilterId) { setAuthorFilterId(''); setAuthorFilterName(''); }
+        setCurrentPage(1);
     };
 
     const handleGenreChange = (v) => {
         setGenreFilter(v);
         if (authorFilterId) { setAuthorFilterId(''); setAuthorFilterName(''); }
+        setCurrentPage(1);
     };
 
     const handleYearChange = (v) => {
         setYearFilter(v);
         if (authorFilterId) { setAuthorFilterId(''); setAuthorFilterName(''); }
+        setCurrentPage(1);
     };
+
+    // Scroll наверх при смене страницы
+    const handlePageChange = (page) => {
+        setCurrentPage(page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // Пагинация на фронтенде
+    const totalPages = Math.ceil(comics.length / PAGE_SIZE);
+    const paginatedComics = comics.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE
+    );
 
     const hasFilters = titleFilter || genreFilter || yearFilter || authorFilterId;
 
     let subtitle = '';
-    if (authorFilterId && authorFilterName) {
-        subtitle = `Тайтлы автора: ${authorFilterName}`;
-    } else if (comics.length > 0) {
+    if (titleFilter) {
+        subtitle = `Поиск: «${titleFilter}» — найдено ${comics.length}`;
+    } else if (authorFilterId && authorFilterName) {
+        subtitle = `Тайтлы автора: ${authorFilterName} — ${comics.length} шт.`;
+    } else {
         subtitle = `Найдено тайтлов: ${comics.length}`;
     }
 
@@ -208,7 +331,7 @@ export default function CatalogPage() {
                     <h1 className="page-title">
                         <span className="page-title__icon">📚</span> Каталог
                     </h1>
-                    {subtitle && <p className="page-subtitle">{subtitle}</p>}
+                    {!loading && <p className="page-subtitle">{subtitle}</p>}
                 </div>
                 <button className="btn btn--primary" onClick={() => setShowModal(true)}>
                     ➕ Добавить тайтл
@@ -221,18 +344,7 @@ export default function CatalogPage() {
 
             {/* ── Фильтры ── */}
             <div className="filters">
-                <div className="filter-item" style={{ flex: 2, minWidth: 180 }}>
-                    <div className="filter-label">🔍 Название</div>
-                    <input
-                        className="filter-input"
-                        placeholder="Введите название..."
-                        value={titleFilter}
-                        onChange={(e) => handleTitleChange(e.target.value)}
-                        style={{ width: '100%' }}
-                    />
-                </div>
-
-                <div className="filter-item" style={{ minWidth: 160 }}>
+                <div className="filter-item" style={{ flex: 1, minWidth: 160 }}>
                     <div className="filter-label">✍️ Автор</div>
                     <CustomDropdown
                         className="filter-select"
@@ -243,7 +355,7 @@ export default function CatalogPage() {
                     />
                 </div>
 
-                <div className="filter-item" style={{ minWidth: 140 }}>
+                <div className="filter-item" style={{ flex: 1, minWidth: 140 }}>
                     <div className="filter-label">🏷️ Жанр</div>
                     <CustomDropdown
                         className="filter-select"
@@ -254,7 +366,7 @@ export default function CatalogPage() {
                     />
                 </div>
 
-                <div className="filter-item" style={{ minWidth: 90 }}>
+                <div className="filter-item" style={{ minWidth: 120 }}>
                     <div className="filter-label">📅 Год от</div>
                     <input
                         className="filter-input"
@@ -264,6 +376,7 @@ export default function CatalogPage() {
                         max="2026"
                         value={yearFilter}
                         onChange={(e) => handleYearChange(e.target.value)}
+                        style={{ width: '100%' }}
                     />
                 </div>
 
@@ -271,7 +384,7 @@ export default function CatalogPage() {
                     <button
                         className="btn btn--ghost btn--sm"
                         onClick={clearFilters}
-                        style={{ alignSelf: 'flex-end' }}
+                        style={{ alignSelf: 'flex-end', marginLeft: 'auto' }}
                     >
                         ✕ Сбросить
                     </button>
@@ -290,11 +403,32 @@ export default function CatalogPage() {
                     <p className="empty-state__text">Попробуйте изменить параметры поиска</p>
                 </div>
             ) : (
-                <div className="comic-grid">
-                    {comics.map((comic) => (
-                        <ComicCard key={comic.id} comic={comic} />
-                    ))}
-                </div>
+                <>
+                    <div className="comic-grid">
+                        {paginatedComics.map((comic) => (
+                            <ComicCard key={comic.id} comic={comic} />
+                        ))}
+                    </div>
+
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onChange={handlePageChange}
+                    />
+
+                    {/* Подпись под пагинацией */}
+                    {totalPages > 1 && (
+                        <div style={{
+                            textAlign: 'center',
+                            color: 'var(--text-muted)',
+                            fontSize: 13,
+                            marginTop: 12,
+                            marginBottom: 24,
+                        }}>
+                            Страница {currentPage} из {totalPages}
+                        </div>
+                    )}
+                </>
             )}
 
             {showModal && (

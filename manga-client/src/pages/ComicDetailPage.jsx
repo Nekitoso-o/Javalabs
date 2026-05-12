@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { comicsApi, reviewsApi, comicImagesApi } from '../api/api.js';
+import { comicsApi, reviewsApi, comicImagesApi, comicChaptersApi } from '../api/api.js';
 import { useApi } from '../hooks/useApi.js';
 import Badge from '../components/ui/Badge.jsx';
 import Rating from '../components/ui/Rating.jsx';
@@ -12,15 +12,16 @@ import ImageGallery from '../components/ui/ImageGallery.jsx';
 import ChapterList from '../components/ui/ChapterList.jsx';
 import CoverLightbox from '../components/ui/CoverLightbox.jsx';
 
-
 const TABS = ['О тайтле', 'Главы', 'Отзывы', 'Редактировать'];
-const COVERS = ['📚','📖','🗡️','⚔️','🌸','🔮','🦊','🐉','💫','🌙'];
+const COVERS = ['📚', '📖', '🗡️', '⚔️', '🌸', '🔮', '🦊', '🐉', '💫', '🌙'];
 
 export default function ComicDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('О тайтле');
     const [coverLightbox, setCoverLightbox] = useState(false);
+    const [initialChapterId, setInitialChapterId] = useState(null);
+    const [readBtnLoading, setReadBtnLoading] = useState(false);
 
     const { data: comic, loading, error, refetch } = useApi(
         useCallback(() => comicsApi.getById(id), [id])
@@ -41,6 +42,31 @@ export default function ComicDetailPage() {
     const showAlert = (type, text) => {
         setAlert({ type, text });
         setTimeout(() => setAlert(null), 3000);
+    };
+
+    const handleReadClick = async () => {
+        setReadBtnLoading(true);
+        try {
+            const chapters = await comicChaptersApi.getAll(id);
+
+            if (!chapters || chapters.length === 0) {
+                setInitialChapterId(null);
+                setActiveTab('Главы');
+                return;
+            }
+
+            const first = chapters.reduce((min, ch) =>
+                ch.chapterNumber < min.chapterNumber ? ch : min
+            );
+
+            setInitialChapterId(first.id);
+            setActiveTab('Главы');
+        } catch {
+            setInitialChapterId(null);
+            setActiveTab('Главы');
+        } finally {
+            setReadBtnLoading(false);
+        }
     };
 
     const handleUpdate = async (formData) => {
@@ -94,23 +120,25 @@ export default function ComicDetailPage() {
     };
 
     if (loading) return <Spinner text="Загружаем тайтл..." />;
-    if (error) return (
-        <div className="alert alert--error">
-            ❌ {error}
-            <button
-                className="btn btn--ghost btn--sm"
-                onClick={() => navigate(-1)}
-                style={{ marginLeft: 12 }}
-            >
-                ← Назад
-            </button>
-        </div>
-    );
+    if (error)
+        return (
+            <div className="alert alert--error">
+                ❌ {error}
+                <button
+                    className="btn btn--ghost btn--sm"
+                    onClick={() => navigate(-1)}
+                    style={{ marginLeft: 12 }}
+                >
+                    ← Назад
+                </button>
+            </div>
+        );
     if (!comic) return null;
 
-    const avgRating = reviews?.length > 0
-        ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
-        : null;
+    const avgRating =
+        reviews?.length > 0
+            ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+            : null;
 
     const coverImage = images?.[0];
     const bannerImage = images?.[1] || images?.[0];
@@ -137,11 +165,7 @@ export default function ComicDetailPage() {
             {/* ── БАННЕР ── */}
             <div className="ml-banner">
                 {bannerImage ? (
-                    <img
-                        src={bannerImage.url}
-                        alt=""
-                        className="ml-banner__bg"
-                    />
+                    <img src={bannerImage.url} alt="" className="ml-banner__bg" />
                 ) : (
                     <div className="ml-banner__bg ml-banner__bg--empty" />
                 )}
@@ -150,7 +174,9 @@ export default function ComicDetailPage() {
                 {/* Обложка */}
                 <div
                     className="ml-cover"
-                    onClick={() => images && images.length > 0 && setCoverLightbox(true)}
+                    onClick={() =>
+                        images && images.length > 0 && setCoverLightbox(true)
+                    }
                 >
                     {coverImage ? (
                         <img
@@ -164,9 +190,7 @@ export default function ComicDetailPage() {
                         </div>
                     )}
                     {images && images.length > 1 && (
-                        <div className="ml-cover__count">
-                            🖼 {images.length}
-                        </div>
+                        <div className="ml-cover__count">🖼 {images.length}</div>
                     )}
                 </div>
 
@@ -192,31 +216,37 @@ export default function ComicDetailPage() {
 
             {/* ── ТЕЛО ── */}
             <div className="ml-body">
-
                 {/* ── ЛЕВАЯ КОЛОНКА ── */}
                 <div className="ml-sidebar">
                     <button
                         className="ml-read-btn"
-                        onClick={() => setActiveTab('Главы')}
+                        onClick={handleReadClick}
+                        disabled={readBtnLoading}
                     >
-                        📖 Читать
+                        {readBtnLoading ? '⏳ Загрузка...' : '📖 Читать'}
                     </button>
 
                     <div className="ml-meta">
                         <div className="ml-meta__item">
                             <div className="ml-meta__label">Год выпуска</div>
-                            <div className="ml-meta__value">{comic.releaseYear} г.</div>
+                            <div className="ml-meta__value">
+                                {comic.releaseYear} г.
+                            </div>
                         </div>
                         {comic.author && (
                             <div className="ml-meta__item">
                                 <div className="ml-meta__label">Автор</div>
-                                <div className="ml-meta__value">{comic.author.name}</div>
+                                <div className="ml-meta__value">
+                                    {comic.author.name}
+                                </div>
                             </div>
                         )}
                         {comic.publisher && (
                             <div className="ml-meta__item">
                                 <div className="ml-meta__label">Издатель</div>
-                                <div className="ml-meta__value">{comic.publisher.name}</div>
+                                <div className="ml-meta__value">
+                                    {comic.publisher.name}
+                                </div>
                             </div>
                         )}
                         {comic.genres?.length > 0 && (
@@ -224,7 +254,11 @@ export default function ComicDetailPage() {
                                 <div className="ml-meta__label">Жанры</div>
                                 <div
                                     className="ml-meta__value"
-                                    style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}
+                                    style={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: 4,
+                                    }}
                                 >
                                     {comic.genres.map((g) => (
                                         <Badge key={g.id}>{g.name}</Badge>
@@ -237,13 +271,14 @@ export default function ComicDetailPage() {
 
                 {/* ── ПРАВАЯ ЧАСТЬ ── */}
                 <div className="ml-content">
-
                     {/* Вкладки */}
                     <div className="ml-tabs">
                         {TABS.map((tab) => (
                             <button
                                 key={tab}
-                                className={`ml-tab${activeTab === tab ? ' ml-tab--active' : ''}`}
+                                className={`ml-tab${
+                                    activeTab === tab ? ' ml-tab--active' : ''
+                                }`}
                                 onClick={() => setActiveTab(tab)}
                             >
                                 {tab}
@@ -280,7 +315,9 @@ export default function ComicDetailPage() {
                                         <div className="ml-stat__value">
                                             {images?.length ?? 0}
                                         </div>
-                                        <div className="ml-stat__label">Изображений</div>
+                                        <div className="ml-stat__label">
+                                            Изображений
+                                        </div>
                                     </div>
                                     {avgRating && (
                                         <div className="ml-stat">
@@ -290,7 +327,9 @@ export default function ComicDetailPage() {
                                             >
                                                 ★ {avgRating}
                                             </div>
-                                            <div className="ml-stat__label">Рейтинг</div>
+                                            <div className="ml-stat__label">
+                                                Рейтинг
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -301,7 +340,14 @@ export default function ComicDetailPage() {
                     {/* ── ГЛАВЫ ── */}
                     {activeTab === 'Главы' && (
                         <div className="ml-tab-content">
-                            <ChapterList comicId={id} editMode={false} />
+                            <ChapterList
+                                comicId={id}
+                                editMode={false}
+                                initialChapterId={initialChapterId}
+                                onInitialChapterHandled={() =>
+                                    setInitialChapterId(null)
+                                }
+                            />
                         </div>
                     )}
 
@@ -341,12 +387,17 @@ export default function ComicDetailPage() {
                             </div>
 
                             {!reviews || reviews.length === 0 ? (
-                                <div className="empty-state" style={{ padding: '60px 0' }}>
+                                <div
+                                    className="empty-state"
+                                    style={{ padding: '60px 0' }}
+                                >
                                     <div className="empty-state__icon">💬</div>
                                     <div className="empty-state__title">
                                         Отзывов пока нет
                                     </div>
-                                    <p className="empty-state__text">Будьте первым!</p>
+                                    <p className="empty-state__text">
+                                        Будьте первым!
+                                    </p>
                                     <button
                                         className="btn btn--primary"
                                         style={{ marginTop: 16 }}
@@ -358,7 +409,10 @@ export default function ComicDetailPage() {
                             ) : (
                                 <div>
                                     {reviews.map((review) => (
-                                        <div key={review.id} className="review-card">
+                                        <div
+                                            key={review.id}
+                                            className="review-card"
+                                        >
                                             <div className="review-card__header">
                                                 <div className="review-card__user">
                                                     <div className="review-card__avatar">
@@ -377,9 +431,14 @@ export default function ComicDetailPage() {
                                                 <button
                                                     className="btn btn--danger btn--sm"
                                                     onClick={() =>
-                                                        handleDeleteReview(review.id)
+                                                        handleDeleteReview(
+                                                            review.id
+                                                        )
                                                     }
-                                                    disabled={deletingReview === review.id}
+                                                    disabled={
+                                                        deletingReview ===
+                                                        review.id
+                                                    }
                                                 >
                                                     {deletingReview === review.id
                                                         ? '⏳'
@@ -398,7 +457,6 @@ export default function ComicDetailPage() {
                     {activeTab === 'Редактировать' && (
                         <div className="ml-tab-content">
                             <div className="ml-edit-grid">
-
                                 {/* Основные данные */}
                                 <div className="ml-edit-block">
                                     <div className="ml-section-title">
@@ -407,7 +465,9 @@ export default function ComicDetailPage() {
                                     <ComicForm
                                         initial={comic}
                                         onSubmit={handleUpdate}
-                                        onCancel={() => setActiveTab('О тайтле')}
+                                        onCancel={() =>
+                                            setActiveTab('О тайтле')
+                                        }
                                         loading={saving}
                                     />
                                 </div>
@@ -440,7 +500,10 @@ export default function ComicDetailPage() {
                                     <div className="ml-section-title">
                                         📖 Управление главами
                                     </div>
-                                    <ChapterList comicId={id} editMode={true} />
+                                    <ChapterList
+                                        comicId={id}
+                                        editMode={true}
+                                    />
                                 </div>
 
                                 {/* Опасная зона */}
@@ -463,7 +526,9 @@ export default function ComicDetailPage() {
                                     </p>
                                     <button
                                         className="btn btn--danger"
-                                        onClick={() => setShowDeleteConfirm(true)}
+                                        onClick={() =>
+                                            setShowDeleteConfirm(true)
+                                        }
                                     >
                                         🗑️ Удалить комикс навсегда
                                     </button>
@@ -520,6 +585,7 @@ export default function ComicDetailPage() {
                     </p>
                 </Modal>
             )}
+
             {/* Лайтбокс обложек */}
             {coverLightbox && images && images.length > 0 && (
                 <CoverLightbox

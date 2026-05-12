@@ -1,3 +1,4 @@
+// manga-client/src/pages/PublishersPage.jsx
 import { useState } from 'react';
 import { publishersApi } from '../api/api.js';
 import { useApi } from '../hooks/useApi.js';
@@ -41,12 +42,35 @@ function PublisherModal({ initial, onSubmit, onCancel, loading }) {
     );
 }
 
+// --- Модалка подтверждения удаления ---
+function DeleteConfirmModal({ title, description, onConfirm, onCancel }) {
+    return (
+        <Modal title="🗑️ Подтверждение удаления" onClose={onCancel}>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>{title}</p>
+            {description && (
+                <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
+                    {description}
+                </p>
+            )}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button className="btn btn--ghost" onClick={onCancel}>
+                    Отмена
+                </button>
+                <button className="btn btn--danger" onClick={onConfirm}>
+                    🗑️ Удалить
+                </button>
+            </div>
+        </Modal>
+    );
+}
+
 export default function PublishersPage() {
     const { data: publishers, loading, refetch } = useApi(publishersApi.getAll);
     const [modal, setModal] = useState(null);
     const [saving, setSaving] = useState(false);
     const [alert, setAlert] = useState(null);
     const [search, setSearch] = useState('');
+    const [deleteTarget, setDeleteTarget] = useState(null);
 
     const showAlert = (type, text) => {
         setAlert({ type, text });
@@ -81,14 +105,16 @@ export default function PublishersPage() {
         }
     };
 
-    const handleDelete = async (pub) => {
-        if (!window.confirm(`Удалить издателя «${pub.name}»?`)) return;
+    const handleDeleteConfirm = async () => {
+        if (!deleteTarget) return;
         try {
-            await publishersApi.delete(pub.id);
-            showAlert('success', '✅ Издатель удалён');
+            await publishersApi.delete(deleteTarget.id);
+            showAlert('error', `🗑️ Издатель «${deleteTarget.name}» удалён`);
             refetch();
         } catch (err) {
             showAlert('error', `❌ ${err.message}`);
+        } finally {
+            setDeleteTarget(null);
         }
     };
 
@@ -130,14 +156,12 @@ export default function PublishersPage() {
             {loading ? (
                 <Spinner />
             ) : (
-                <div
-                    style={{
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius)',
-                        overflow: 'hidden',
-                    }}
-                >
+                <div style={{
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius)',
+                    overflow: 'hidden',
+                }}>
                     <table className="data-table">
                         <thead>
                         <tr>
@@ -150,9 +174,7 @@ export default function PublishersPage() {
                         {filtered.length === 0 ? (
                             <tr>
                                 <td colSpan={3} style={{ textAlign: 'center', padding: 40 }}>
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      Издатели не найдены
-                    </span>
+                                    <span style={{ color: 'var(--text-muted)' }}>Издатели не найдены</span>
                                 </td>
                             </tr>
                         ) : (
@@ -170,15 +192,13 @@ export default function PublishersPage() {
                                         <div style={{ display: 'flex', gap: 8 }}>
                                             <button
                                                 className="btn btn--secondary btn--sm"
-                                                onClick={() =>
-                                                    setModal({ type: 'edit', publisher: pub })
-                                                }
+                                                onClick={() => setModal({ type: 'edit', publisher: pub })}
                                             >
                                                 ✏️
                                             </button>
                                             <button
                                                 className="btn btn--danger btn--sm"
-                                                onClick={() => handleDelete(pub)}
+                                                onClick={() => setDeleteTarget(pub)}
                                             >
                                                 🗑️
                                             </button>
@@ -210,6 +230,22 @@ export default function PublishersPage() {
                         loading={saving}
                     />
                 </Modal>
+            )}
+
+            {deleteTarget && (
+                <DeleteConfirmModal
+                    title={
+                        <>
+                            Вы уверены, что хотите удалить издателя{' '}
+                            <strong style={{ color: 'var(--text-primary)' }}>
+                                «{deleteTarget.name}»
+                            </strong>?
+                        </>
+                    }
+                    description="Это действие необратимо. Все тайтлы этого издателя останутся в каталоге без привязки к издателю."
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() => setDeleteTarget(null)}
+                />
             )}
         </div>
     );

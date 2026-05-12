@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+// manga-client/src/pages/AuthorsPage.jsx
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authorsApi } from '../api/api.js';
 import { useApi } from '../hooks/useApi.js';
@@ -11,10 +12,7 @@ function AuthorModal({ initial, onSubmit, onCancel, loading }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!name.trim()) {
-            setError('Введите имя автора');
-            return;
-        }
+        if (!name.trim()) { setError('Введите имя автора'); return; }
         onSubmit({ name: name.trim() });
     };
 
@@ -45,6 +43,28 @@ function AuthorModal({ initial, onSubmit, onCancel, loading }) {
     );
 }
 
+// --- Модалка подтверждения удаления ---
+function DeleteConfirmModal({ title, description, onConfirm, onCancel }) {
+    return (
+        <Modal title="🗑️ Подтверждение удаления" onClose={onCancel}>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>{title}</p>
+            {description && (
+                <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
+                    {description}
+                </p>
+            )}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button className="btn btn--ghost" onClick={onCancel}>
+                    Отмена
+                </button>
+                <button className="btn btn--danger" onClick={onConfirm}>
+                    🗑️ Удалить
+                </button>
+            </div>
+        </Modal>
+    );
+}
+
 export default function AuthorsPage() {
     const navigate = useNavigate();
     const { data: authors, loading, refetch } = useApi(authorsApi.getAll);
@@ -52,6 +72,7 @@ export default function AuthorsPage() {
     const [saving, setSaving] = useState(false);
     const [alert, setAlert] = useState(null);
     const [search, setSearch] = useState('');
+    const [deleteTarget, setDeleteTarget] = useState(null); // автор для удаления
 
     const showAlert = (type, text) => {
         setAlert({ type, text });
@@ -86,14 +107,16 @@ export default function AuthorsPage() {
         }
     };
 
-    const handleDelete = async (author) => {
-        if (!window.confirm(`Удалить автора «${author.name}»?`)) return;
+    const handleDeleteConfirm = async () => {
+        if (!deleteTarget) return;
         try {
-            await authorsApi.delete(author.id);
-            showAlert('success', '✅ Автор удалён');
+            await authorsApi.delete(deleteTarget.id);
+            showAlert('error', `🗑️ Автор «${deleteTarget.name}» удалён`);
             refetch();
         } catch (err) {
             showAlert('error', `❌ ${err.message}`);
+        } finally {
+            setDeleteTarget(null);
         }
     };
 
@@ -135,14 +158,12 @@ export default function AuthorsPage() {
             {loading ? (
                 <Spinner />
             ) : (
-                <div
-                    style={{
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius)',
-                        overflow: 'hidden',
-                    }}
-                >
+                <div style={{
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius)',
+                    overflow: 'hidden',
+                }}>
                     <table className="data-table">
                         <thead>
                         <tr>
@@ -155,9 +176,7 @@ export default function AuthorsPage() {
                         {filtered.length === 0 ? (
                             <tr>
                                 <td colSpan={3} style={{ textAlign: 'center', padding: 40 }}>
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      Авторы не найдены
-                    </span>
+                                    <span style={{ color: 'var(--text-muted)' }}>Авторы не найдены</span>
                                 </td>
                             </tr>
                         ) : (
@@ -181,15 +200,13 @@ export default function AuthorsPage() {
                                             </button>
                                             <button
                                                 className="btn btn--secondary btn--sm"
-                                                onClick={() =>
-                                                    setModal({ type: 'edit', author })
-                                                }
+                                                onClick={() => setModal({ type: 'edit', author })}
                                             >
                                                 ✏️
                                             </button>
                                             <button
                                                 className="btn btn--danger btn--sm"
-                                                onClick={() => handleDelete(author)}
+                                                onClick={() => setDeleteTarget(author)}
                                             >
                                                 🗑️
                                             </button>
@@ -203,11 +220,9 @@ export default function AuthorsPage() {
                 </div>
             )}
 
+            {/* Модалки создания/редактирования */}
             {modal?.type === 'create' && (
-                <Modal
-                    title="➕ Добавить автора"
-                    onClose={() => setModal(null)}
-                >
+                <Modal title="➕ Добавить автора" onClose={() => setModal(null)}>
                     <AuthorModal
                         onSubmit={handleCreate}
                         onCancel={() => setModal(null)}
@@ -215,12 +230,8 @@ export default function AuthorsPage() {
                     />
                 </Modal>
             )}
-
             {modal?.type === 'edit' && (
-                <Modal
-                    title="✏️ Редактировать автора"
-                    onClose={() => setModal(null)}
-                >
+                <Modal title="✏️ Редактировать автора" onClose={() => setModal(null)}>
                     <AuthorModal
                         initial={modal.author}
                         onSubmit={handleUpdate}
@@ -228,6 +239,23 @@ export default function AuthorsPage() {
                         loading={saving}
                     />
                 </Modal>
+            )}
+
+            {/* Модалка подтверждения удаления */}
+            {deleteTarget && (
+                <DeleteConfirmModal
+                    title={
+                        <>
+                            Вы уверены, что хотите удалить автора{' '}
+                            <strong style={{ color: 'var(--text-primary)' }}>
+                                «{deleteTarget.name}»
+                            </strong>?
+                        </>
+                    }
+                    description="Это действие необратимо. Все тайтлы этого автора останутся в каталоге без привязки к автору."
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() => setDeleteTarget(null)}
+                />
             )}
         </div>
     );

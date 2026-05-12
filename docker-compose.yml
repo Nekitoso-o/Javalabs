@@ -1,0 +1,78 @@
+version: '3.9'
+
+services:
+
+  # ── PostgreSQL ─────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: mangacatalog-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       mangacatalog
+      POSTGRES_USER:     manga_user
+      POSTGRES_PASSWORD: manga_pass
+    ports:
+      - "5432:5432"          # Открываем для локального подключения (pgAdmin и т.д.)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U manga_user -d mangacatalog"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend (Spring Boot) ──────────────────────────────────────
+  backend:
+    build:
+      context: .             # Dockerfile в корне проекта
+      dockerfile: Dockerfile
+    container_name: mangacatalog-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy   # Ждём, пока БД будет готова
+    environment:
+      # Параметры подключения к БД (переопределяют application.properties)
+      SPRING_DATASOURCE_URL:      jdbc:postgresql://db:5432/mangacatalog
+      SPRING_DATASOURCE_USERNAME: manga_user
+      SPRING_DATASOURCE_PASSWORD: manga_pass
+
+      # Hibernate автоматически создаёт/обновляет схему БД
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+      # Папка для загружаемых файлов (внутри контейнера)
+      APP_UPLOAD_DIR: /app/uploads
+
+      # CORS: разрешаем запросы с фронтенда
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:80
+    ports:
+      - "8080:8080"
+    volumes:
+      # Монтируем папку uploads, чтобы файлы не терялись при перезапуске
+      - uploads_data:/app/uploads
+
+  # ── Frontend (React + Nginx) ───────────────────────────────────
+  frontend:
+    build:
+      context: ./manga-client    # Dockerfile в папке manga-client
+      dockerfile: Dockerfile
+      args:
+        # URL бэкенда для Vite во время сборки
+        # В docker-compose фронт видит бэк через nginx proxy,
+        # поэтому здесь пустая строка (nginx сам проксирует /api/)
+        VITE_API_URL: ""
+    container_name: mangacatalog-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      # URL бэкенда для Nginx proxy_pass (подставляется в nginx.conf)
+      BACKEND_URL: http://backend:8080
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
