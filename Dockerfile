@@ -12,8 +12,6 @@ RUN ./mvnw dependency:go-offline -B
 
 COPY src ./src
 
-# -DskipTests — без тестов
-# -Dcheckstyle.skip — без checkstyle
 RUN ./mvnw package -DskipTests -Dcheckstyle.skip -B
 
 # ─── Этап 2: Финальный образ ──────────────────────────────────────
@@ -27,4 +25,4 @@ COPY --from=builder /app/target/*.jar app.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java -jar app.jar --server.port=${PORT:-8080}"]
