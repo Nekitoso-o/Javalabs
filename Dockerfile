@@ -1,37 +1,30 @@
-                                      # ─── Этап 1: Сборка ───────────────────────────────────────────────
-                                      FROM eclipse-temurin:21-jdk-alpine AS builder
+# ─── Этап 1: Сборка ───────────────────────────────────────────────
+FROM eclipse-temurin:21-jdk-alpine AS builder
 
-                                      WORKDIR /app
+WORKDIR /app
 
-                                      # Копируем Maven Wrapper и pom.xml отдельно — Docker кэширует этот слой.
-                                      # Зависимости не будут скачиваться заново, если pom.xml не изменился.
-                                      COPY .mvn/ .mvn/
-                                      COPY mvnw pom.xml ./
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
 
-                                      # Делаем mvnw исполняемым (важно для Linux-контейнеров)
-                                      RUN chmod +x mvnw
+RUN chmod +x mvnw
 
-                                      # Скачиваем зависимости (кэшируемый слой)
-                                      RUN ./mvnw dependency:go-offline -B
+RUN ./mvnw dependency:go-offline -B
 
-                                      # Копируем исходный код и собираем JAR (без тестов для ускорения)
-                                      COPY src ./src
-                                      RUN ./mvnw package -DskipTests -B
+COPY src ./src
 
-                                      # ─── Этап 2: Финальный образ ──────────────────────────────────────
-                                      # Используем JRE (не JDK) — образ в 2 раза меньше
-                                      FROM eclipse-temurin:21-jre-alpine
+# -DskipTests — без тестов
+# -Dcheckstyle.skip — без checkstyle
+RUN ./mvnw package -DskipTests -Dcheckstyle.skip -B
 
-                                      WORKDIR /app
+# ─── Этап 2: Финальный образ ──────────────────────────────────────
+FROM eclipse-temurin:21-jre-alpine
 
-                                      # Создаём папки для загружаемых файлов (обложки и главы)
-                                      RUN mkdir -p uploads/covers uploads/chapters
+WORKDIR /app
 
-                                      # Копируем только JAR из этапа сборки
-                                      COPY --from=builder /app/target/*.jar app.jar
+RUN mkdir -p uploads/covers uploads/chapters
 
-                                      # Открываем порт
-                                      EXPOSE 8080
+COPY --from=builder /app/target/*.jar app.jar
 
-                                      # Запускаем приложение
-                                      ENTRYPOINT ["java", "-jar", "app.jar"]
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
