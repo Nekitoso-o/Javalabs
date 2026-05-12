@@ -6,6 +6,7 @@ import com.example.mangacatalog.entity.ComicImage;
 import com.example.mangacatalog.exception.ResourceNotFoundException;
 import com.example.mangacatalog.repository.ComicImageRepository;
 import com.example.mangacatalog.repository.ComicRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,6 +20,9 @@ public class ComicImageService {
     private static final String COVERS_DIR = "covers";
     private static final String COMIC_NOT_FOUND = "Комикс с ID %s не найден!";
     private static final String IMAGE_NOT_FOUND = "Изображение с ID %s не найдено!";
+
+    @Value("${app.base-url:}")
+    private String baseUrl;
 
     private final ComicImageRepository imageRepository;
     private final ComicRepository comicRepository;
@@ -101,7 +105,7 @@ public class ComicImageService {
     }
 
     public ComicImageDto toDto(ComicImage img) {
-        String url = "/api/images/covers/" + img.getFileName();
+        String url = baseUrl + "/api/images/covers/" + img.getFileName();
         return new ComicImageDto(
             img.getId(), url,
             img.getOriginalName(),

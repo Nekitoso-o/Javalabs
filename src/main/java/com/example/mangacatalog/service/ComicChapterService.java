@@ -8,6 +8,7 @@ import com.example.mangacatalog.entity.ComicChapter;
 import com.example.mangacatalog.exception.ResourceNotFoundException;
 import com.example.mangacatalog.repository.ComicChapterRepository;
 import com.example.mangacatalog.repository.ComicRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +23,9 @@ public class ComicChapterService {
     private static final String CHAPTERS_DIR = "chapters";
     private static final String COMIC_NOT_FOUND = "Комикс с ID %s не найден!";
     private static final String CHAPTER_NOT_FOUND = "Глава с ID %s не найдена!";
+
+    @Value("${app.base-url:}")
+    private String baseUrl;
 
     private final ComicChapterRepository chapterRepository;
     private final ComicRepository comicRepository;
@@ -94,7 +98,6 @@ public class ComicChapterService {
         return toDto(saved, true);
     }
 
-
     @Transactional
     public void deleteChapter(Long comicId, Long chapterId) {
         ComicChapter chapter = chapterRepository.findById(chapterId)
@@ -106,14 +109,12 @@ public class ComicChapterService {
                 String.format(CHAPTER_NOT_FOUND, chapterId));
         }
 
-        // Удаляем файлы страниц
         for (ChapterPage page : chapter.getPages()) {
             fileStorage.delete(CHAPTERS_DIR, page.getFileName());
         }
 
         chapterRepository.delete(chapter);
     }
-
 
     private ComicChapterDto toDto(ComicChapter chapter, boolean withPages) {
         List<ChapterPageDto> pages = withPages
@@ -135,7 +136,7 @@ public class ComicChapterService {
     }
 
     private ChapterPageDto pageToDto(ChapterPage page) {
-        String url = "/api/images/chapters/" + page.getFileName();
+        String url = baseUrl + "/api/images/chapters/" + page.getFileName();
         return new ChapterPageDto(
             page.getId(), url,
             page.getOriginalName(),
