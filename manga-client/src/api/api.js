@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = '/api';
+const BASE_URL = 'https://mangacatalog-backend.onrender.com/api';
 
 const client = axios.create({
     baseURL: BASE_URL,
