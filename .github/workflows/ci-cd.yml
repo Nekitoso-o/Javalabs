@@ -1,0 +1,146 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # ── 1. Тесты бэкенда ──────────────────────────────────────────
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: mangacatalog
+          POSTGRES_USER: manga_user
+          POSTGRES_PASSWORD: manga_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run Tests
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/mangacatalog
+          SPRING_DATASOURCE_USERNAME: manga_user
+          SPRING_DATASOURCE_PASSWORD: manga_pass
+          SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+        run: ./mvnw test -B -Dcheckstyle.skip
+
+  # ── 2. Сборка фронтенда ───────────────────────────────────────
+  test-frontend:
+    name: Frontend Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: manga-client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./manga-client
+        run: npm install
+
+      - name: Build check
+        working-directory: ./manga-client
+        env:
+          CI: false
+        run: npm run build
+
+  # ── 3. Сборка и пуш Docker-образов ───────────────────────────
+  build-and-push:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [ test-backend, test-frontend ]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          dockerfile: Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/mangacatalog-backend:latest
+
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./manga-client
+          dockerfile: manga-client/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/mangacatalog-frontend:latest
+
+  # ── 4. Деплой на Render ───────────────────────────────────────
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    needs: [ build-and-push ]
+    steps:
+      - name: Deploy Backend to Render
+        run: |
+          curl -X POST \
+            "https://api.render.com/v1/services/${{ secrets.RENDER_BACKEND_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": false}'
+
+      - name: Wait for backend to start
+        run: sleep 30
+
+      - name: Deploy Frontend to Render
+        run: |
+          curl -X POST \
+            "https://api.render.com/v1/services/${{ secrets.RENDER_FRONTEND_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": false}'
+
+  # ── 5. Проверка работоспособности ─────────────────────────────
+  healthcheck:
+    name: Healthcheck
+    runs-on: ubuntu-latest
+    needs: [ deploy ]
+    steps:
+      - name: Wait for deploy
+        run: sleep 90
+
+      - name: Check Backend Health
+        run: |
+          curl -f https://mangacatalog-backend.onrender.com/api/authors
+          echo "Backend OK!"
+
+      - name: Check Frontend Health
+        run: |
+          curl -f https://mangacatalog-frontend.onrender.com
+          echo "Frontend OK!"
