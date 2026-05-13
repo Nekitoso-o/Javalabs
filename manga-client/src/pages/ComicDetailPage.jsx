@@ -12,7 +12,8 @@ import ImageGallery from '../components/ui/ImageGallery.jsx';
 import ChapterList from '../components/ui/ChapterList.jsx';
 import CoverLightbox from '../components/ui/CoverLightbox.jsx';
 
-const TABS = ['О тайтле', 'Главы', 'Отзывы', 'Редактировать'];
+// Меняем массив вкладок — убираем "Редактировать"
+const TABS = ['О тайтле', 'Главы', 'Отзывы'];
 const COVERS = ['📚', '📖', '🗡️', '⚔️', '🌸', '🔮', '🦊', '🐉', '💫', '🌙'];
 
 export default function ComicDetailPage() {
@@ -174,16 +175,10 @@ export default function ComicDetailPage() {
                 {/* Обложка */}
                 <div
                     className="ml-cover"
-                    onClick={() =>
-                        images && images.length > 0 && setCoverLightbox(true)
-                    }
+                    onClick={() => images && images.length > 0 && setCoverLightbox(true)}
                 >
                     {coverImage ? (
-                        <img
-                            src={coverImage.url}
-                            alt={comic.title}
-                            className="ml-cover__img"
-                        />
+                        <img src={coverImage.url} alt={comic.title} className="ml-cover__img" />
                     ) : (
                         <div className="ml-cover__placeholder">
                             <span>{emoji}</span>
@@ -197,21 +192,19 @@ export default function ComicDetailPage() {
                 {/* Заголовок */}
                 <div className="ml-banner__info">
                     <h1 className="ml-banner__title">{comic.title}</h1>
-                    <div className="ml-banner__subtitle">
-                        {comic.author?.name || ''}
-                    </div>
+                    <div className="ml-banner__subtitle">{comic.author?.name || ''}</div>
                 </div>
 
                 {/* Рейтинг */}
-                {avgRating && (
-                    <div className="ml-banner__rating">
-                        <span className="ml-banner__rating-star">★</span>
-                        <span className="ml-banner__rating-value">{avgRating}</span>
-                        <span className="ml-banner__rating-count">
-                            {reviews.length} отз.
-                        </span>
-                    </div>
-                )}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+                    {avgRating && (
+                        <div className="ml-banner__rating">
+                            <span className="ml-banner__rating-star">★</span>
+                            <span className="ml-banner__rating-value">{avgRating}</span>
+                            <span className="ml-banner__rating-count">{reviews.length} отз.</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* ── ТЕЛО ── */}
@@ -271,19 +264,60 @@ export default function ComicDetailPage() {
 
                 {/* ── ПРАВАЯ ЧАСТЬ ── */}
                 <div className="ml-content">
-                    {/* Вкладки */}
-                    <div className="ml-tabs">
-                        {TABS.map((tab) => (
-                            <button
-                                key={tab}
-                                className={`ml-tab${
-                                    activeTab === tab ? ' ml-tab--active' : ''
-                                }`}
-                                onClick={() => setActiveTab(tab)}
-                            >
-                                {tab}
-                            </button>
-                        ))}
+
+                    {/* Вкладки и кнопка "Редактировать" */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        borderBottom: '1px solid rgba(255,255,255,0.1)',
+                        marginBottom: '20px'
+                    }}>
+                        <div className="ml-tabs" style={{ borderBottom: 'none', marginBottom: 0 }}>
+                            {TABS.map((tab) => (
+                                <button
+                                    key={tab}
+                                    className={`ml-tab${
+                                        activeTab === tab ? ' ml-tab--active' : ''
+                                    }`}
+                                    onClick={() => setActiveTab(tab)}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Кнопка Редактировать теперь здесь */}
+                        <button
+                            onClick={() => setActiveTab('Редактировать')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '7px 16px',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                background: 'rgba(255,255,255,0.08)',
+                                color: '#fff',
+                                fontSize: 13,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                backdropFilter: 'blur(8px)',
+                                transition: 'all 0.2s',
+                                letterSpacing: '0.3px',
+                                marginBottom: '8px'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                            }}
+                        >
+                            ✏️ Редактировать
+                        </button>
                     </div>
 
                     {/* ── О ТАЙТЛЕ ── */}

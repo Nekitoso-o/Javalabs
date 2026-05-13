@@ -1,4 +1,3 @@
-// manga-client/src/pages/HomePage.jsx
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../hooks/useApi.js';
 import { comicsApi, authorsApi, genresApi } from '../api/api.js';

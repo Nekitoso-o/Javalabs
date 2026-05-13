@@ -13,7 +13,6 @@ export default function ChapterReader({ chapter, allChapters, onClose, onChapter
 
     const currentChapterIdx = logicalChapters.findIndex((c) => c.id === chapter.id);
 
-    // Гарантированный скролл наверх при смене главы
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = 0;
@@ -50,14 +49,45 @@ export default function ChapterReader({ chapter, allChapters, onClose, onChapter
 
     return (
         <div className="reader" onClick={() => setShowControls((v) => !v)}>
+
+            {/* Верхняя панель */}
             <div
                 className={`reader__topbar${showControls ? ' visible' : ''}`}
                 onClick={(e) => e.stopPropagation()}
             >
-                <button className="reader__btn" onClick={(e) => { e.stopPropagation(); onClose(); }}>
-                    ✕ Закрыть
+                {/* Кнопка закрыть */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); onClose(); }}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '8px 18px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        background: 'rgba(255,255,255,0.08)',
+                        color: '#fff',
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        backdropFilter: 'blur(8px)',
+                        transition: 'all 0.2s',
+                        letterSpacing: '0.3px',
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(233,69,96,0.7)';
+                        e.currentTarget.style.borderColor = 'rgba(233,69,96,0.8)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+                    }}
+                >
+                    <span style={{ fontSize: 16, lineHeight: 1 }}>✕</span>
+                    Закрыть
                 </button>
 
+                {/* Название главы */}
                 <div className="reader__chapter-info">
                     <span style={{ color: 'var(--accent)', fontWeight: 700 }}>
                         Глава {chapter.chapterNumber}
@@ -68,9 +98,11 @@ export default function ChapterReader({ chapter, allChapters, onClose, onChapter
                         </span>
                     )}
                 </div>
+
                 <div style={{ width: 100 }} />
             </div>
 
+            {/* Контент (Лента) */}
             <div className="reader__scroll" ref={scrollRef}>
                 {pages.map((page, idx) => (
                     <div key={page.id} className="reader__scroll-page">
@@ -83,6 +115,7 @@ export default function ChapterReader({ chapter, allChapters, onClose, onChapter
                     </div>
                 ))}
 
+                {/* Навигация между главами */}
                 <div className="reader__scroll-nav">
                     {currentChapterIdx > 0 && (
                         <button className="btn btn--secondary" onClick={goPrevChapter}>
